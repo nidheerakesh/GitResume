@@ -1,0 +1,29 @@
+# Render Blueprint — one-click deploy for GitResume
+# https://render.com/docs/blueprint-spec
+
+services:
+  # Backend API (FastAPI)
+  - type: web
+    name: gitresume-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false  # User sets this manually in Render dashboard
+
+  # Frontend (Vite React)
+  - type: web
+    name: gitresume-app
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    plan: free
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          name: gitresume-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+        # Render auto-appends the backend URL; we add /api
