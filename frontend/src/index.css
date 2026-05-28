@@ -11,35 +11,35 @@
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   /* HSL Color System */
-  --hue-primary: 245; /* Indigo */
-  --hue-accent: 190;  /* Cyan */
+  --hue-primary: 0; /* White / Silver */
+  --hue-accent: 240; /* Darker Silver */
   
-  /* Slate/Obsidian Base colors */
-  --bg-dark: hsl(230, 25%, 7%);
-  --bg-surface: hsl(225, 20%, 12%);
-  --bg-surface-elevated: hsl(225, 18%, 18%);
+  /* Enamel Obsidian Base colors */
+  --bg-dark: #050506;             /* Deepest glossy enamel black */
+  --bg-surface: #0a0a0c;          /* High-gloss obsidian surface */
+  --bg-surface-elevated: #121216; /* Elevated platinum black grey */
   
-  --primary: hsl(var(--hue-primary), 85%, 65%);
-  --primary-glow: hsla(var(--hue-primary), 85%, 65%, 0.15);
-  --accent: hsl(var(--hue-accent), 90%, 50%);
+  --primary: #ffffff;             /* Crisp pure white */
+  --primary-glow: rgba(255, 255, 255, 0.08);
+  --accent: #a1a1aa;              /* Elegant platinum silver */
   
-  --text-primary: hsl(210, 20%, 98%);
-  --text-secondary: hsl(215, 15%, 70%);
-  --text-muted: hsl(215, 10%, 50%);
+  --text-primary: #ffffff;        /* Pure high-contrast white */
+  --text-secondary: #e4e4e7;      /* Crisp off-white */
+  --text-muted: #88888e;          /* Elegant silver grey */
   
-  --border-light: hsla(220, 20%, 100%, 0.08);
-  --border-glow: hsla(var(--hue-primary), 80%, 65%, 0.3);
+  --border-light: rgba(255, 255, 255, 0.12); /* Sharp high-contrast outline */
+  --border-glow: rgba(255, 255, 255, 0.45);
   
-  --gradient-cosmic: linear-gradient(135deg, hsl(245, 80%, 65%) 0%, hsl(265, 85%, 60%) 50%, hsl(190, 90%, 50%) 100%);
-  --gradient-glass: linear-gradient(180deg, hsla(225, 20%, 15%, 0.7) 0%, hsla(225, 20%, 10%, 0.8) 100%);
+  --gradient-cosmic: linear-gradient(135deg, #ffffff 0%, #a1a1aa 50%, #27272a 100%); /* Breathtaking monochrome gloss */
+  --gradient-glass: linear-gradient(180deg, rgba(10, 10, 12, 0.9) 0%, rgba(5, 5, 6, 0.98) 100%);
 
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 20px;
   
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
-  --shadow-md: 0 10px 30px -10px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 20px hsla(var(--hue-primary), 85%, 65%, 0.25);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 10px 40px -10px rgba(0, 0, 0, 0.9);
+  --shadow-glow: 0 0 25px rgba(255, 255, 255, 0.15);
   
   transition: background-color 0.3s ease;
 }
@@ -169,7 +169,7 @@ a:hover {
 
 .btn-primary {
   background: var(--gradient-cosmic);
-  color: var(--text-primary);
+  color: #050506; /* Crisp dark enamel black text for readability */
   box-shadow: var(--shadow-sm);
 }
 
@@ -186,7 +186,7 @@ a:hover {
 }
 
 .btn-secondary:hover {
-  background: hsl(225, 18%, 24%);
+  background: #1f1f26; /* Beautiful charcoal grey */
   border-color: var(--primary);
   transform: translateY(-1px);
 }
