@@ -211,15 +211,15 @@ class GitHubAnalyzer:
         Fallback mock data generator for seamless API experience.
         """
         return {
-            "name": f"{username.capitalize()} Dev",
+            "name": f"{username}",
             "username": username,
             "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
-            "bio": "Passionate Software Engineer | Building beautiful, highly performant systems",
-            "email": f"{username}@example.com",
-            "public_repos": 14,
-            "followers": 142,
-            "total_stars": 240,
-            "total_forks": 42,
+            "bio": "",
+            "email": f"{username}@github.com",
+            "public_repos": 3,
+            "followers": 0,
+            "total_stars": 0,
+            "total_forks": 0,
             "languages": [
                 {"name": "Python", "count": 8, "percentage": 57.1},
                 {"name": "TypeScript", "count": 4, "percentage": 28.6},
@@ -229,8 +229,8 @@ class GitHubAnalyzer:
                 {
                     "name": "aeon-planner",
                     "description": "An AI-powered daily study-planner and roadmap manager with RPG game elements.",
-                    "stars": 124,
-                    "forks": 18,
+                    "stars": 0,
+                    "forks": 0,
                     "url": f"https://github.com/{username}/aeon-planner",
                     "language": "TypeScript",
                     "topics": ["react", "convex", "typescript", "rpg", "planner"],
@@ -246,8 +246,8 @@ class GitHubAnalyzer:
                 {
                     "name": "contest-fetcher-api",
                     "description": "High performance server-side contest scraper proxy supporting multi-platform caching.",
-                    "stars": 82,
-                    "forks": 12,
+                    "stars": 0,
+                    "forks": 0,
                     "url": f"https://github.com/{username}/contest-fetcher-api",
                     "language": "Python",
                     "topics": ["python", "fastapi", "web-scraper", "redis"],
@@ -263,8 +263,8 @@ class GitHubAnalyzer:
                 {
                     "name": "git-resume-generator",
                     "description": "Synthesize ATS-friendly Overleaf resume templates straight from public GitHub histories.",
-                    "stars": 34,
-                    "forks": 12,
+                    "stars": 0,
+                    "forks": 0,
                     "url": f"https://github.com/{username}/git-resume-generator",
                     "language": "Python",
                     "topics": ["python", "jinja2", "latex", "openai"],

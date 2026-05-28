@@ -269,7 +269,7 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
         def clean_commit_msg(msg):
             msg_lower = msg.lower()
             # Ignore generic Git boilerplate noise completely
-            if any(term in msg_lower for term in ["initial commit", "add files via upload", "update readme", "merge branch", "rename files", "cleanup", "fix typo"]):
+            if any(term in msg_lower for term in ["initial commit", "add files via upload", "update readme", "merge branch", "rename files", "cleanup", "fix typo", "delete", "remove unused", "rename ", "wip", "temp", "todo", "minor"]):
                 return None
             
             # Strip standard prefix tags
@@ -292,73 +292,59 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                 techs = [p.get("language")]
             if not techs:
                 techs = ["Git", "GitHub"]
-                
-            p_name_lower = p.get("name", "").lower()
-            
-            p_name = p.get("name")
-            
-            # Custom technical highlights specifically tuned for a perfect recruiter-ready resume!
-            if "aeon" in p_name_lower:
-                p_name = "Smart Planner for Student Productivity"
-                techs = ["React", "Tailwind CSS", "TypeScript"]
-                bullets = [
-                    "Developed a structured productivity planner for task scheduling and exam tracking using React.",
-                    "Designed modular UI components and dashboard-style interfaces for tracking productivity and workflow efficiency.",
-                    "Exploring AI-based intelligent scheduling and adaptive task prioritization features."
-                ]
-            elif "ecg" in p_name_lower:
-                p_name = "ECG Signal Analysis (MIT-BIH Arrhythmia Dataset)"
-                techs = ["Python", "NumPy", "Pandas", "Scikit-learn"]
-                bullets = [
-                    "Processed and analyzed ECG signal data using Python libraries including NumPy, Pandas, and Scikit-learn.",
-                    "Applied preprocessing, feature extraction, and model evaluation techniques on real-world healthcare datasets.",
-                    "Experimented with machine learning models for arrhythmia classification and performance optimization.",
-                    "Worked with structured datasets and analytical workflows for healthcare AI applications."
-                ]
-            elif "kernel" in p_name_lower or "scope" in p_name_lower or "explain" in p_name_lower:
-                p_name = "Explain-It AI Chatbot"
-                techs = ["React", "Tailwind CSS", "Gemini API", "Flask"]
-                bullets = [
-                    "Built an AI-powered learning assistant using React, Tailwind CSS, and structured prompting techniques.",
-                    "Integrated and experimented with LLM workflows inspired by OpenAI and Gemini style APIs for adaptive response generation.",
-                    "Designed multiple explanation-level pipelines to improve accessibility and personalized learning experiences.",
-                    "Working toward Flask-based backend integration and scalable AI response handling."
-                ]
-            else:
-                # Dynamic rephraser for arbitrary repositories
-                commits = p.get("commits", [])
-                valid_commits = []
-                for c in commits:
-                    if isinstance(c, dict):
-                        msg = c.get("message")
+
+            p_name = p.get("name", "Project")
+            desc = p.get("description", "")
+
+            # Dynamic rephraser for ALL repositories
+            commits = p.get("commits", [])
+            valid_commits = []
+            for c in commits:
+                if isinstance(c, dict):
+                    msg = c.get("message")
+                else:
+                    msg = str(c)
+                if msg:
+                    cleaned = clean_commit_msg(msg)
+                    if cleaned:
+                        valid_commits.append(cleaned)
+
+            bullets = []
+            action_verbs = ["Implemented", "Developed", "Designed"]
+            if valid_commits:
+                for i, c_msg in enumerate(valid_commits[:3]):
+                    # Strip leading verbs to avoid "Implemented implement..." doubling
+                    leading_verbs = ["implement ", "add ", "fix ", "update ", "create ", "refactor ", "move ", "set ", "change ", "integrate ", "apply ", "migrate "]
+                    msg_body = c_msg
+                    for lv in leading_verbs:
+                        if msg_body.lower().startswith(lv):
+                            msg_body = msg_body[len(lv):]
+                            msg_body = msg_body[0].upper() + msg_body[1:] if msg_body else msg_body
+                            break
+                    if msg_body and len(msg_body) > 8:
+                        verb = action_verbs[i % len(action_verbs)]
+                        bullets.append(f"{verb} {msg_body[0].lower() + msg_body[1:]}")
+
+            # Fill remaining bullets from repo description and tech stack
+            tech_str = ', '.join(techs[:3]) if techs else 'standard tooling'
+            while len(bullets) < 3:
+                if len(bullets) == 0:
+                    if desc and len(desc) > 10:
+                        bullets.append(f"Developed {p_name}: {desc[:120]}.")
                     else:
-                        msg = str(c)
-                    if msg:
-                        cleaned = clean_commit_msg(msg)
-                        if cleaned:
-                            valid_commits.append(cleaned)
-                            
-                bullets = []
-                if valid_commits:
-                    for c_msg in valid_commits[:3]:
-                        bullets.append(f"Designed and implemented feature additions focusing on {c_msg[0].lower() + c_msg[1:]}")
-                
-                # Make sure we always return 3 high-quality recruiter bullet points
-                while len(bullets) < 3:
-                    if len(bullets) == 0:
-                        bullets.append(f"Engineered and launched {p.get('name')} as a high-performance repository, utilizing {' and '.join(techs[:2])}.")
-                    elif len(bullets) == 1:
-                        bullets.append("Refactored code modules to support clean separation of concerns and optimized execution latency.")
-                    else:
-                        bullets.append("Collaborated with project maintainers on version control, pull requests, and automated regression reviews.")
-                
+                        bullets.append(f"Built and maintained {p_name} using {tech_str}.")
+                elif len(bullets) == 1:
+                    bullets.append(f"Leveraged {tech_str} for core application logic, data handling, and module design.")
+                else:
+                    bullets.append(f"Managed version control workflows with Git, including branching strategies and code reviews.")
+
             mock_projects.append({
                 "name": p_name,
                 "tech": techs[:4],
                 "start_date": "2025",
                 "end_date": "Present",
                 "url": p.get("url") or f"https://github.com/{analysis.get('username')}/{p.get('name')}",
-                "bullets": bullets
+                "bullets": bullets[:3]
             })
 
         while len(mock_projects) < 3:
@@ -375,31 +361,30 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                 ]
             })
 
-        fallback_summary = f"Results-driven Software Engineer with extensive expertise in full-stack web architectures, specialized in {', '.join(skills.get('languages', [])[:3]) if skills.get('languages') else 'Python, React'}. Demonstrated history of constructing scalable repositories like {', '.join([p['name'] for p in analysis.get('top_projects', [])[:2]]) if analysis.get('top_projects') else 'Project'}, backed by a strong open-source contribution record on GitHub."
+        lang_list = skills.get('languages', [])
+        lang_display = ', '.join(lang_list[:3]) if lang_list else 'multiple technologies'
+        proj_names = [p['name'] for p in analysis.get('top_projects', [])[:2]]
+        proj_display = ' and '.join(proj_names) if proj_names else 'various projects'
+
+        fallback_summary = f"Software developer with hands-on experience in {lang_display}. Active open-source contributor maintaining {analysis.get('public_repos', 0)} repositories on GitHub, including {proj_display}."
+
+        # Only include verifiable achievements based on real GitHub data
+        real_achievements = []
+        repo_count = analysis.get('public_repos', 0)
+        star_count = analysis.get('total_stars', 0)
+        if repo_count > 0:
+            real_achievements.append({
+                "title": "Open Source Contributor",
+                "description": f"Maintained {repo_count} public repositories on GitHub with {star_count} stars",
+                "year": "2025"
+            })
 
         return {
             "summary": fallback_summary,
             "skills": skills,
             "projects": mock_projects,
-            "achievements": [
-                {"title": "Open Source Contributor", "description": f"Maintained {analysis.get('public_repos', 0)} repositories on GitHub with {analysis.get('total_stars', 0)} stars", "year": "2026"},
-                {"title": "Kaggle Competitor", "description": "Ranked top 10% in system optimization datasets", "year": "2025"},
-                {"title": "Smart India Hackathon", "description": "National Finalist, developed edge system solutions", "year": "2024"}
-            ],
-            "experience": [
-                {
-                    "title": "Software Engineering Intern",
-                    "company": "Open Source Community",
-                    "start_date": "May 2025",
-                    "end_date": "Aug 2025",
-                    "location": "Remote",
-                    "bullets": [
-                        "Developed high performance modular components optimizing local deployment workflows and latency.",
-                        "Implemented comprehensive unit testing suites, improving test coverage by 24% across core system interfaces.",
-                        "Collaborated via forks, pull requests, and detailed reviews adhering to robust production guidelines."
-                    ]
-                }
-            ]
+            "achievements": real_achievements,
+            "experience": []
         }
 
     def generate_professional_summary(self, name: str, skills: List[str], role: str = None) -> str:

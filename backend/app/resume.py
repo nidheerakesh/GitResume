@@ -130,14 +130,25 @@ LATEX_TEMPLATE = r"""%-------------------------
 \vspace{-6.5mm}
 \begin{center}
     \small{
-        \href{https://github.com/\github}{\faGithub \hspace{0.2mm} github.com/\github} |  
-        \href{https://www.linkedin.com/in/\linkedin/}{\faLinkedinSquare \hspace{0.2mm} linkedin.com/in/\linkedin} | 
-        \href{mailto:\emaila}{\faSend \hspace{0.2mm} \emaila} | 
-        \faPhone \hspace{0.2mm} << phone >>
+        <% set contact_parts = [] %>
+        <% if github_username %>
+        <% set _ = contact_parts.append("\\href{https://github.com/" + github_username + "}{\\faGithub \\hspace{0.2mm} github.com/" + github_username + "}") %>
+        <% endif %>
+        <% if linkedin_username %>
+        <% set _ = contact_parts.append("\\href{https://www.linkedin.com/in/" + linkedin_username + "/}{\\faLinkedinSquare \\hspace{0.2mm} linkedin.com/in/" + linkedin_username + "}") %>
+        <% endif %>
+        <% if email %>
+        <% set _ = contact_parts.append("\\href{mailto:" + email + "}{\\faSend \\hspace{0.2mm} " + email + "}") %>
+        <% endif %>
+        <% if phone %>
+        <% set _ = contact_parts.append("\\faPhone \\hspace{0.2mm} " + phone) %>
+        <% endif %>
+        << contact_parts | join(' | ') >>
     }
 \end{center}
 \vspace{-3mm}
 
+<% if education %>
 %-----------EDUCATION-----------------
 \vspace{-2.5mm}
 \section{Education}
@@ -151,7 +162,9 @@ LATEX_TEMPLATE = r"""%-------------------------
 <% endfor %>
 \resumeSubHeadingListEnd
 \vspace{-3.5mm}
+<% endif %>
 
+<% if experience %>
 %-----------EXPERIENCE-----------------
 \section{Experience}
 \resumeSubHeadingListStart
@@ -169,6 +182,7 @@ LATEX_TEMPLATE = r"""%-------------------------
 <% endfor %>
 \resumeSubHeadingListEnd
 \vspace{-5.5mm}
+<% endif %>
 
 %-----------PROJECTS-----------------
 \section{Projects}
@@ -188,6 +202,7 @@ LATEX_TEMPLATE = r"""%-------------------------
 \resumeSubHeadingListEnd
 \vspace{-5.5mm}
 
+<% if achievements %>
 %-----------ACHIEVEMENTS-----------------
 \section{Achievements}
 \vspace{0.2mm}
@@ -197,25 +212,33 @@ LATEX_TEMPLATE = r"""%-------------------------
 <% endfor %>
 \end{tabular*}}
 \vspace{-2.5mm}
+<% endif %>
 
 %-----------TECHNICAL SKILLS-----------------
 \section{Technical Skills}
 \vspace{0.2mm}
 \small{\begin{tabular*}{\textwidth}[t]{p{0.5\textwidth} p{0.5\textwidth}}
 \hspace{-3.1mm}{\textbf{ Programming languages:} << skills.languages | join(', ') >>} & {\textbf{Web Technologies:} << skills.frameworks | join(', ') >>} \\  
-\hspace{-3.1mm}{\textbf{ Tools \& Databases:} << skills.tools | join(', ') >>} & {\textbf{Miscellaneous:} Git, Shell, Linux, Unity}
+\hspace{-3.1mm}{\textbf{ Tools \& Databases:} << skills.tools | join(', ') >>} & {}
 \end{tabular*}}
 \vspace{-2.5mm}
 
+<% if coursework and (coursework.cs or coursework.math) %>
 %-----------COURSEWORK-----------------
 \section{Relevant Coursework}
 \vspace{0.2mm}
 \small{\begin{tabular*}{\textwidth}[t]{p{\textwidth}}
+<% if coursework.cs %>
 \hspace{-3.1mm}\textbf{ Computer Science: }{<< coursework.cs >>}\\
+<% endif %>
+<% if coursework.math %>
 \hspace{-3.1mm}\textbf{ Mathematics: }{<< coursework.math >>}
+<% endif %>
 \end{tabular*}}
 \vspace{-2.5mm}
+<% endif %>
 
+<% if positions %>
 %-----------POSITIONS OF RESPONSIBILITY-----------------
 \section{Positions of Responsibility}
 \vspace{-0.4mm}
@@ -229,6 +252,7 @@ LATEX_TEMPLATE = r"""%-------------------------
 \resumeSubHeadingListEnd
 \hspace*{-2mm}\rule{1.030\textwidth}{0.1mm}
 \vspace{0mm}
+<% endif %>
 
 \end{document}
 """

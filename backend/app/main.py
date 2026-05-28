@@ -70,11 +70,15 @@ def generate_resume_data(req: GenerateResumeRequest):
         analysis_data = {
             "username": req.github.split('/')[-1] if '/' in req.github else req.github,
             "public_repos": len(req.top_projects),
-            "followers": 15,
+            "followers": 0,
             "total_stars": sum(p.get("stars", 0) or p.get("stargazers_count", 0) for p in req.top_projects),
+            "total_forks": sum(p.get("forks", 0) or p.get("forks_count", 0) for p in req.top_projects),
             "top_projects": req.top_projects,
             "languages": [{"name": l, "percentage": 100 // lang_len if lang_len > 0 else 100} for l in langs],
-            "detected_skills": req.skills
+            "detected_skills": req.skills,
+            "name": req.name,
+            "bio": req.bio,
+            "email": req.email
         }
         
         tailor = ResumeTailor(groq_api_key=req.groq_api_key)
@@ -97,44 +101,27 @@ def generate_resume_data(req: GenerateResumeRequest):
             "tools": merge_skill_lists(scraped_skills.get("tools", []), ai_skills.get("tools", []))
         }
         
-        # Education matching template
-        mock_education = [
-            {
-                "school": "Indian Institute of Technology Guwahati, India",
-                "degree": "Bachelors of Technology in Computer Science and Engineering",
-                "start_date": "Jul 2022",
-                "end_date": "Jun 2026",
-                "gpa": "9.15/10.0"
-            }
-        ]
-        
-        # Template Positions of Responsibility
-        mock_positions = [
-            {"title": "Head Coordinator, Coding Club", "description": "Managed developer squads, organizing tech hackathons and programming bootcamps for 500+ participants", "year": "2025 - 2026"},
-            {"title": "Public Relations Representative", "description": "Coordinated PR outreach channels, securing industry collaborations and funding sponsorships", "year": "2023 - 2024"}
-        ]
-        
         # Merge AI outputs with input coordinates
         return {
             "name": req.name,
             "email": req.email,
-            "phone": req.phone or "+91-xxxxxxxxxx",
-            "linkedin": req.linkedin or f"https://linkedin.com/in/{req.github}",
+            "phone": req.phone or "",
+            "linkedin": req.linkedin or "",
             "github": req.github if req.github.startswith("https://") else f"https://github.com/{req.github}",
-            "course": "B.Tech - Computer Science and Engineering",
-            "roll": "220101000",
-            "website": "https://example.com",
+            "course": "",
+            "roll": "",
+            "website": "",
             "summary": ai_res.get("summary", ""),
             "skills": merged_skills,
             "experience": ai_res.get("experience", []),
             "projects": ai_res.get("projects", []),
-            "education": mock_education,
+            "education": [],
             "achievements": ai_res.get("achievements", []),
             "coursework": {
-                "cs": "Deep Learning, Data Structures and Algorithms, Databases, Operating Systems, Computer Networks",
-                "math": "Optimization, Discrete Maths, Probability and Random Processes, Number Theory, Linear Algebra"
+                "cs": "",
+                "math": ""
             },
-            "positions": mock_positions
+            "positions": []
         }
     except Exception as e:
         import traceback

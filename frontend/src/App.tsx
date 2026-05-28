@@ -1298,10 +1298,12 @@ function App() {
                   <div className="resume-p-header">
                     <h2 className="resume-p-name">{resumeData.name}</h2>
                     <div className="resume-p-contact">
-                      <span>github.com/{getShortGithub(resumeData.github)}</span> | 
-                      <span> linkedin.com/in/{getShortLinkedin(resumeData.linkedin)}</span> | 
-                      <span> {resumeData.email}</span> | 
-                      <span> +91-{resumeData.phone}</span>
+                      {[
+                        resumeData.github ? `github.com/${getShortGithub(resumeData.github)}` : '',
+                        resumeData.linkedin ? `linkedin.com/in/${getShortLinkedin(resumeData.linkedin)}` : '',
+                        resumeData.email || '',
+                        resumeData.phone || ''
+                      ].filter(Boolean).join(' | ')}
                     </div>
                   </div>
 
@@ -1402,7 +1404,6 @@ function App() {
                             <strong>Tools & Databases:</strong> {resumeData.skills.tools.join(', ')}
                           </td>
                           <td style={{ width: '50%', paddingLeft: '8px', paddingTop: '2px' }}>
-                            <strong>Miscellaneous:</strong> Git, Shell, Linux, Unity
                           </td>
                         </tr>
                       </tbody>
@@ -1410,23 +1411,29 @@ function App() {
                   </div>
 
                   {/* RELEVANT COURSEWORK */}
-                  <div className="resume-p-section">
-                    <h4 className="resume-p-sec-title">Relevant Coursework</h4>
-                    <table>
-                      <tbody>
-                        <tr>
-                          <td>
-                            <strong>Computer Science:</strong> {resumeData.coursework.cs}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style={{ paddingTop: '2px' }}>
-                            <strong>Mathematics:</strong> {resumeData.coursework.math}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                  {(resumeData.coursework.cs || resumeData.coursework.math) && (
+                    <div className="resume-p-section">
+                      <h4 className="resume-p-sec-title">Relevant Coursework</h4>
+                      <table>
+                        <tbody>
+                          {resumeData.coursework.cs && (
+                            <tr>
+                              <td>
+                                <strong>Computer Science:</strong> {resumeData.coursework.cs}
+                              </td>
+                            </tr>
+                          )}
+                          {resumeData.coursework.math && (
+                            <tr>
+                              <td style={{ paddingTop: '2px' }}>
+                                <strong>Mathematics:</strong> {resumeData.coursework.math}
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
 
                   {/* POSITIONS OF RESPONSIBILITY */}
                   {positionsList.length > 0 && (
