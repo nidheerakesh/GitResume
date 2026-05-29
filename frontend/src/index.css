@@ -564,7 +564,7 @@ textarea.form-control {
     height: auto !important;
   }
   
-  .navbar, .panel-header, .tabs-container, .btn, .form-group, .panel:first-child, .logo-container, .app-container > h2, p, button {
+  .navbar, .panel-header, .tabs-container, .btn, .form-group, .panel:first-child, .logo-container, .app-container > h2, p, button, footer {
     display: none !important;
   }
   

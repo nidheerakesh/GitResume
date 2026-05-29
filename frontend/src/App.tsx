@@ -1509,6 +1509,54 @@ function App() {
         </main>
       )}
 
+      {/* OPEN SOURCE CONTRIBUTIONS INVITE FOOTER */}
+      <footer style={{
+        marginTop: 'auto',
+        padding: '3rem 2rem 2rem 2rem',
+        borderTop: '1px solid var(--border-light)',
+        textAlign: 'center',
+        background: 'rgba(0, 0, 0, 0.2)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '1rem'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+          <span>💻 GitResume is <strong>100% Open Source</strong></span>
+          <span style={{ color: 'var(--border-light)' }}>|</span>
+          <span>Released under the MIT License</span>
+        </div>
+        <p style={{
+          color: 'var(--text-muted)',
+          fontSize: '0.875rem',
+          maxWidth: '600px',
+          lineHeight: '1.6',
+          margin: '0 auto'
+        }}>
+          We believe that the best developer tooling is built in public. Whether you want to add new LaTeX templates, refine our Deep Code Intelligence parser, or improve the AI prompting—your contributions are warmly welcome!
+        </p>
+        <a 
+          href="https://github.com/nidheerakesh/GitResume" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="btn btn-secondary"
+          style={{
+            marginTop: '0.5rem',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.6rem 1.25rem',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid var(--border-light)',
+            cursor: 'pointer',
+            textDecoration: 'none',
+            borderRadius: 'var(--radius-md)'
+          }}
+        >
+          🚀 Contribute on GitHub
+        </a>
+      </footer>
+
       {/* VERSION HISTORY MODAL */}
       {showVersionsModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
