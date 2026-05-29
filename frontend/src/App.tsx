@@ -1453,7 +1453,7 @@ function App() {
                       />
                     )}
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-                      💡 This is real, compilable LaTeX (.tex) source code. You can edit it directly above, copy it, or download it as a .tex file. Paste into <a href="https://www.overleaf.com" target="_blank" style={{color: 'var(--accent)'}}>Overleaf</a> to compile a PDF instantly.
+                      This is real, compilable LaTeX (.tex) source code. You can edit it directly above, copy it, or download it as a .tex file. Paste into <a href="https://www.overleaf.com" target="_blank" style={{color: 'var(--accent)'}}>Overleaf</a> to compile a PDF instantly.
                     </p>
                   </div>
                 )}
@@ -1655,7 +1655,7 @@ function App() {
         gap: '1rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-          <span>💻 GitResume is <strong>100% Open Source</strong></span>
+          <span>GitResume is <strong>100% Open Source</strong></span>
           <span style={{ color: 'var(--border-light)' }}>|</span>
           <span>Released under the MIT License</span>
         </div>
@@ -1686,7 +1686,7 @@ function App() {
             borderRadius: 'var(--radius-md)'
           }}
         >
-          🚀 Contribute on GitHub
+          Contribute on GitHub
         </a>
       </footer>
 
@@ -1732,7 +1732,7 @@ function App() {
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-light)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
               <div>
-                <h4 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)' }}>✨ Interactive AI Resume Optimizer</h4>
+                <h4 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)' }}>Interactive AI Resume Optimizer</h4>
                 <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                   Review and selectively accept or reject keyword-tailored optimizations below.
                 </p>
@@ -1754,7 +1754,7 @@ function App() {
                   {/* Item Header */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      {diff.type === 'summary' ? '📝 Professional Summary' : `🎯 Project: ${diff.parentName}`}
+                      {diff.type === 'summary' ? 'Professional Summary' : `Project: ${diff.parentName}`}
                     </span>
                     
                     {/* Status Badge */}
