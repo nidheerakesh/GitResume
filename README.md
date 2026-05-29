@@ -80,9 +80,13 @@ This launches:
 
 ## Deployment
 
-We recommend a hybrid deployment architecture:
-1. **Frontend**: Deploy the `frontend/` folder on **Vercel** or **Netlify** for fast CDN edge delivery.
-2. **Backend**: Deploy the `backend/` folder on **Render**, **Railway**, or **Fly.io** for persistent compute to safely bypass serverless timeout limits (which terminate operations lasting longer than 10 seconds).
+This project is pre-configured for a single-platform, monorepo deployment hosted entirely on **Vercel** using Vercel Serverless Functions.
+
+To deploy:
+1. Import your GitHub repository into Vercel.
+2. Select the repository root folder. Vercel will automatically detect and parse the `vercel.json` routing orchestrator.
+3. Configure your server keys under **Project Settings ➔ Environment Variables** (e.g., add `GROQ_API_KEY`).
+4. Click **Deploy**. Both the Vite frontend and FastAPI backend will serve dynamically on the same domain, eliminating CORS configuration entirely.
 
 ---
 

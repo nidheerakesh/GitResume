@@ -1,12 +1,20 @@
+import sys
+from pathlib import Path
+
+# Add backend directory to path to ensure absolute import compatibility in serverless sandboxes
+backend_dir = str(Path(__file__).resolve().parent.parent)
+if backend_dir not in sys.path:
+    sys.path.append(backend_dir)
+
+from app.github import GitHubAnalyzer
+from app.resume import generate_resume_latex
+from app.ai import ResumeTailor
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import os
-
-from .github import GitHubAnalyzer
-from .resume import generate_resume_latex
-from .ai import ResumeTailor
 
 app = FastAPI(title="GitResume API", version="1.0.0")
 
