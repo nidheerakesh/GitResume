@@ -1,4 +1,4 @@
-# 🚀 GitResume: Premium ATS Resume Architect & Deep Code Intelligence Engine
+# GitResume: Premium ATS Resume Architect and Deep Code Intelligence Engine
 
 GitResume is a premium, open-source, automated resume-building application that turns your raw digital footprint on GitHub into high-fidelity, recruitment-ready, and ATS-compliant resumes.
 
@@ -6,18 +6,18 @@ Unlike basic resume generators that only look at repository names or generic com
 
 ---
 
-## ✨ Features
+## Features
 
-- 🧠 **Deep Code Intelligence**: Automatically extracts dependency frameworks, language details, root directory structures, and implementation patterns directly from your public GitHub code files.
-- 🎯 **ATS-Optimized Project Bullet Points**: Leverages custom AI models (Groq/OpenAI) to write impact-driven bullet points using strong system action verbs aligned with **Google's X-Y-Z formula** (*Accomplished X, measured by Y, by doing Z*).
-- 📜 **Real LaTeX (.tex) Export**: Auto-compiles your resume structures into clean, professional LaTeX source code ready to be pasted directly into Overleaf or compile offline.
-- 🖨️ **Print-Ready Native Preview**: Built-in CSS overrides format the live dashboard preview into a clean, selectable, single-page PDF document when using the browser print-frame.
-- ⚡ **Individual Groq/GitHub Auth**: Users can paste their own GitHub Personal Access Tokens and Groq/OpenAI Keys to secure high-frequency limits independently.
-- 🔄 **Robust Local Fallback**: Integrated offline database mode which generates reliable engineering summaries based on static code patterns if API limits are completely depleted.
+- **Deep Code Intelligence**: Automatically extracts dependency frameworks, language details, root directory structures, and implementation patterns directly from your public GitHub code files.
+- **ATS-Optimized Project Bullet Points**: Leverages custom AI models (Groq/OpenAI) to write impact-driven bullet points using strong system action verbs aligned with **Google's X-Y-Z formula** (*Accomplished X, measured by Y, by doing Z*).
+- **Real LaTeX (.tex) Export**: Auto-compiles your resume structures into clean, professional LaTeX source code ready to be pasted directly into Overleaf or compile offline.
+- **Print-Ready Native Preview**: Built-in CSS overrides format the live dashboard preview into a clean, selectable, single-page PDF document when using the browser print-frame.
+- **Individual Groq/GitHub Auth**: Users can paste their own GitHub Personal Access Tokens and Groq/OpenAI Keys to secure high-frequency limits independently.
+- **Robust Local Fallback**: Integrated offline database mode which generates reliable engineering summaries based on static code patterns if API limits are completely depleted.
 
 ---
 
-## 📂 Project Directory Structure
+## Project Directory Structure
 
 ```
 GitResume/
@@ -39,7 +39,7 @@ GitResume/
 
 ---
 
-## 💻 Local Development Setup
+## Local Development Setup
 
 To run GitResume locally on your machine, follow these steps:
 
@@ -65,7 +65,7 @@ The Vite React app will be running at [http://localhost:5173](http://localhost:5
 
 ---
 
-## 🐳 Docker Containerization
+## Docker Containerization
 
 To spin up both frontend and backend instantly using Docker:
 
@@ -78,7 +78,7 @@ This launches:
 
 ---
 
-## 🚀 Deployment
+## Deployment
 
 We recommend a hybrid deployment architecture:
 1. **Frontend**: Deploy the `frontend/` folder on **Vercel** or **Netlify** for fast CDN edge delivery.
@@ -86,6 +86,6 @@ We recommend a hybrid deployment architecture:
 
 ---
 
-## 🛡️ License
+## License
 
 This project is open-source and licensed under the [MIT License](LICENSE). Feel free to customize and expand it!

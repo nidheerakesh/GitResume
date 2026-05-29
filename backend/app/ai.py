@@ -197,16 +197,16 @@ The generated output must feel:
    - Sound like a senior engineer describing their systems to a tech lead, free of generic filler.
 
    BAD EXAMPLES TO AVOID:
-   ❌ Architected modular project structure.
-   ❌ Maintained repository architecture.
-   ❌ Leveraged Python for application logic.
+   - [BAD] Architected modular project structure.
+   - [BAD] Maintained repository architecture.
+   - [BAD] Leveraged Python for application logic.
 
    GOOD EXAMPLES TO EMULATE:
-   ✅ Built an AI-powered document fraud detection pipeline using Gemini and OCR-based feature extraction.
-   ✅ Developed server-side API aggregation services to combine Codeforces, LeetCode, and GitHub activity into a unified analytics dashboard.
-   ✅ Implemented JWT-based authentication and role-based access control for secure user management.
-   ✅ Designed retrieval-augmented generation workflows to provide context-aware responses from uploaded documents.
-   ✅ Optimized database queries and caching strategies, reducing API response latency by 40%.
+   - [GOOD] Built an AI-powered document fraud detection pipeline using Gemini and OCR-based feature extraction.
+   - [GOOD] Developed server-side API aggregation services to combine Codeforces, LeetCode, and GitHub activity into a unified analytics dashboard.
+   - [GOOD] Implemented JWT-based authentication and role-based access control for secure user management.
+   - [GOOD] Designed retrieval-augmented generation workflows to provide context-aware responses from uploaded documents.
+   - [GOOD] Optimized database queries and caching strategies, reducing API response latency by 40%.
 
    When information is insufficient:
    - Infer likely functionality from source code.
