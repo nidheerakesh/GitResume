@@ -398,15 +398,21 @@ function App() {
   };
 
   const handleToggleDiffStatus = (id: string, status: 'accepted' | 'rejected') => {
-    setTailorDiffs(prev => prev.map(diff => {
-      if (diff.id === id) {
-        return { ...diff, status };
-      }
-      return diff;
-    }));
+    console.log('handleToggleDiffStatus called:', id, status);
+    setTailorDiffs(prev => {
+      const next = prev.map(diff => {
+        if (diff.id === id) {
+          return { ...diff, status };
+        }
+        return diff;
+      });
+      console.log('New tailorDiffs array:', next);
+      return next;
+    });
   };
 
   const applyTailoredSuggestions = () => {
+    console.log('applyTailoredSuggestions triggered. tailorDiffs:', tailorDiffs);
     if (!resumeData) return;
     
     // Deep clone resumeData
@@ -414,9 +420,11 @@ function App() {
     
     let appliedCount = 0;
     tailorDiffs.forEach(diff => {
+      console.log('Processing item in apply:', diff.id, 'status:', diff.status);
       if (diff.status === 'accepted') {
         appliedCount++;
         const [section, indexStr, field, bulletIndexStr] = diff.path;
+        console.log('Applying path:', diff.path, 'with content:', diff.tailored);
         
         if (section === 'summary') {
           updatedResume.summary = diff.tailored;
@@ -436,6 +444,7 @@ function App() {
       }
     });
     
+    console.log('Calling setResumeData with updated schema:', updatedResume);
     setResumeData(updatedResume);
     setShowTailorReviewModal(false);
     setTailorDiffs([]);
@@ -1806,7 +1815,8 @@ function App() {
                   {/* Action Buttons */}
                   <div style={{ display: 'flex', gap: '0.75rem', alignSelf: 'flex-end', marginTop: '0.25rem' }}>
                     <button 
-                      onClick={() => handleToggleDiffStatus(diff.id, 'rejected')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); handleToggleDiffStatus(diff.id, 'rejected'); }}
                       style={{
                         padding: '0.4rem 1rem',
                         fontSize: '0.75rem',
@@ -1818,13 +1828,15 @@ function App() {
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '0.25rem'
+                        gap: '0.25rem',
+                        pointerEvents: 'auto'
                       }}
                     >
-                      ✗ Reject
+                      Reject
                     </button>
                     <button 
-                      onClick={() => handleToggleDiffStatus(diff.id, 'accepted')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); handleToggleDiffStatus(diff.id, 'accepted'); }}
                       style={{
                         padding: '0.4rem 1rem',
                         fontSize: '0.75rem',
@@ -1836,10 +1848,11 @@ function App() {
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '0.25rem'
+                        gap: '0.25rem',
+                        pointerEvents: 'auto'
                       }}
                     >
-                      ✓ Accept
+                      Accept
                     </button>
                   </div>
                   
