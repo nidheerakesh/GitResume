@@ -281,19 +281,29 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           resume_data: resumeData,
-          job_description: jobDescription
+          job_description: jobDescription,
+          groq_api_key: groqKey.trim() || undefined
         })
       });
 
-      if (!res.ok) throw new Error('AI tailoring service failed.');
+      if (!res.ok) {
+        let errMsg = 'AI tailoring service failed.';
+        try {
+          const errBody = await res.json();
+          if (errBody.detail) {
+            errMsg = errBody.detail;
+          }
+        } catch (e) {}
+        throw new Error(errMsg);
+      }
 
       const tailoredData = await res.json();
       setResumeData(tailoredData);
       setTailorSuccess(true);
       setTimeout(() => setTailorSuccess(false), 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Failed to tailor resume: AI Service error.');
+      alert(err.message || 'Failed to tailor resume: AI Service error.');
     } finally {
       setIsTailoring(false);
     }

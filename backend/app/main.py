@@ -42,6 +42,7 @@ class GenerateResumeRequest(BaseModel):
 class TailorResumeRequest(BaseModel):
     resume_data: Dict[str, Any]
     job_description: str
+    groq_api_key: Optional[str] = None
 
 class CompileResumeRequest(BaseModel):
     resume_data: Dict[str, Any]
@@ -142,10 +143,12 @@ def tailor_resume_data(req: TailorResumeRequest):
     Takes structural resume data and tailors it based on a job description.
     """
     try:
-        tailor = ResumeTailor()
+        tailor = ResumeTailor(groq_api_key=req.groq_api_key)
         tailored_data = tailor.tailor_resume(req.resume_data, req.job_description)
         return tailored_data
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/resume/compile")

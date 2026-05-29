@@ -759,9 +759,15 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                         
                     return merged_data
                 else:
-                    print(f"Resume tailoring failed with status {res.status_code}: {res.text}")
+                    error_detail = f"AI Tailoring API call failed with status {res.status_code}: {res.text}"
+                    print(error_detail)
+                    if self.groq_api_key or self.api_key:
+                        raise ValueError(error_detail)
             except Exception as e:
-                print(f"AI Tailoring failed: {e}. Falling back to smart keyword heuristics.")
+                error_detail = f"AI Tailoring Error: {str(e)}"
+                print(error_detail)
+                if self.groq_api_key or self.api_key:
+                    raise ValueError(error_detail)
 
         # 3. Smart local heuristic fallbacks
         tailored_data = original_data.copy()
