@@ -711,7 +711,12 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                 And the following target Job Description:
                 "{job_description}"
 
-                Rewrite the "summary", and the bullet points inside "projects" and "experience" to strongly align with the job description keywords and technical demands.
+                Rewrite the "summary", and the bullet points inside "projects" and "experience" to strongly align with the job description keywords and technical demands, while strictly adhering to these CRITICAL rules:
+                1. CONTEXT PRESERVATION: You MUST strictly preserve the core engineering actions, factual domain, and scope of the original projects and experiences. Under no circumstances should you fabricate or change the fundamental nature of the work.
+                2. NO FABRICATION: Do not claim experience in areas completely unrelated to the original items. For example, do not rewrite a frontend calendar API integration to claim it uses "machine learning algorithms" or "statistical analysis" unless the original bullet explicitly mentions ML/AI components.
+                3. ENRICHMENT OVER INVENTION: Inject relevant tech stack keywords and ATS verbs from the job description ONLY where they naturally complement and accurately reflect the existing project domain (e.g., specifying React/TypeScript for a frontend project, or SQL/FastAPI/REST APIs for a backend system if the project uses them).
+                4. Keep the exact same number of bullet points and projects in the same order.
+
                 Return ONLY a JSON object with matching structure:
                 {{
                   "summary": "new tailored summary",
