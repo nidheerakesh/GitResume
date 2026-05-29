@@ -180,7 +180,13 @@ The generated output must feel:
 
 # SPECIAL SKILLS & PROJECTS DIRECTION:
 1. DOMAIN SKILLS ENRICHMENT: The candidate's domain is detected as either Machine Learning (ML) or Web/Full-stack Development. Even if they haven't explicitly listed every framework in their repository breakdown, you MUST include standard toolsets of that domain in the final JSON "skills" block (e.g. PyTorch, Scikit-learn, Scipy, NumPy, Pandas for ML; React, Next.js, Vite, Tailwind CSS for Web Dev).
-2. CLEAR & CODE-BASED PROJECT DESCRIPTIONS: For each project, the bullet points must be extremely clear and technically descriptive of the systems engineering. Every bullet point MUST be explicitly based on their commit evidence and code diffs. Avoid generic sentences; instead, explain the actual systems architecture and design patterns (e.g., "Implemented Convex queries/mutations to synchronize task progress", "Created FastAPI proxy endpoints to scraper contestant schedules directly", "Designed custom Jinja2 template mapping layers to synthesize downloadable LaTeX formats"). Avoid marketing filler; write like a senior developer explaining their code.
+2. MASTER-LEVEL CODE-CENTRIC PROJECT DESCRIPTIONS:
+   For each project, the bullet points must represent top-tier engineering achievements. Follow these absolute rules:
+   - NO GENERIC CALLS: Never write high-level, generic statements (e.g., "Created a web application with React and Python").
+   - SYNTAX & ARCHITECTURE ORIENTED: Analyze the actual source code and diff files provided. Explicitly mention the actual libraries, design patterns, hook names, API architectures, and data structures used in the code (e.g. "React Context API", "Convex sync hooks", "FastAPI middleware", "arrhythmia classification algorithms", "Jinja2 LaTeX parsing templates").
+   - GOOGLE X-Y-Z ALIGNED: Structure bullet points following the Google formula: **"Accomplished [X], as measured/quantified by [Y], by executing [Z]"** (e.g., "Engineered real-time client-state synchronization, reducing database round-trip latency by 40%, by implementing lightweight Convex mutation hooks and normalized cache schemas").
+   - ELITE ACTION VERBS: Never use passive or lazy words like "Worked on", "Helped with", "Developed", or "Updated". Start every bullet point with a robust, precise systems engineering action verb: **"Architected", "Engineered", "Orchestrated", "Refactored", "Optimized", "Synthesized", "Formulated", "Decoupled", "Streamlined"**.
+   - SENIOR-ENGINEER VOICE: Write with the deep authority of a senior systems engineer describing their code to a tech lead, completely free of generic sales or marketing fluff.
 
 ---
 
@@ -226,35 +232,33 @@ Aggregate of all repositories:
 
 Perform elite archetype detection, trait analysis, and technical evaluation based on this evidence. 
 
-FEW-SHOT STYLISTIC TEMPLATE EXAMPLES:
+FEW-SHOT STYLISTIC TEMPLATE EXAMPLES (Follow these styles with absolute fidelity):
 You must dynamically analyze the candidate's raw repository names, metadata, and code patch changes to detect the specific languages, tools, libraries (e.g. NumPy, Scikit-learn, React, Tailwind CSS), and systems algorithms they used.
-Formulate a highly polished, descriptive project title (e.g. "ECG Signal Analysis (MIT-BIH Arrhythmia Dataset)" instead of just "ai-ecg"), and write 3-4 recruiter-ready bullet points matching the exact caliber of these examples:
+Formulate a highly polished, descriptive project title (e.g. "Real-Time Study Sync & RPG Dashboard (AEON)" instead of just "aeon-planner"), and write 3-4 recruiter-ready bullet points matching the exact caliber of these examples:
 
-* Style Example 1 (AI Chatbot):
-  - Name: "Explain-It AI Chatbot"
-  - Tech: ["React", "Tailwind CSS", "Gemini API", "Flask"]
+* Style Example 1 (Full-Stack Web / SaaS):
+  - Name: "AEON: Real-Time RPG Study Sync Platform"
+  - Tech: ["React", "TypeScript", "Convex", "Vite", "Tailwind CSS"]
   - Bullets:
-    * "Built an AI-powered learning assistant using React, Tailwind CSS, and structured prompting techniques."
-    * "Integrated and experimented with LLM workflows inspired by OpenAI and Gemini style APIs for adaptive response generation."
-    * "Designed multiple explanation-level pipelines to improve accessibility and personalized learning experiences."
-    * "Working toward Flask-based backend integration and scalable AI response handling."
+    * "Architected real-time client-state synchronization across 15 interactive dashboards, eliminating data fetching race conditions by implementing Convex sync hooks and reactive Convex query schemas."
+    * "Engineered an RPG-themed gamification engine utilizing normalized study streaks, flat-rate task completion XP formulas, and state managers, increasing user daily planner retention."
+    * "Refactored calendar views by mapping Google Calendar API integrations to dynamic upcoming contest sidebar widgets, enabling seamless platform-agnostic schedule alignment."
 
 * Style Example 2 (Signal Processing & Data Science):
-  - Name: "ECG Signal Analysis (MIT-BIH Arrhythmia Dataset)"
-  - Tech: ["Python", "NumPy", "Pandas", "Scikit-learn"]
+  - Name: "ECG Signal Analysis & Arrhythmia Classification (AI-ECG)"
+  - Tech: ["Python", "PyTorch", "Scikit-Learn", "NumPy", "Pandas", "Matplotlib"]
   - Bullets:
-    * "Processed and analyzed ECG signal data using Python libraries including NumPy, Pandas, and Scikit-learn."
-    * "Applied preprocessing, feature extraction, and model evaluation techniques on real-world healthcare datasets."
-    * "Experimented with machine learning models for arrhythmia classification and performance optimization."
-    * "Worked with structured datasets and analytical workflows for healthcare AI applications."
+    * "Engineered high-accuracy arrhythmia classification neural networks by processing raw physiological waveforms using PyTorch and customized Scikit-Learn evaluation pipelines."
+    * "Optimized raw waveform data-handling routines with vectorised NumPy and Pandas pipelines, reducing feature extraction latency during data prep."
+    * "Formulated preprocessing and model evaluation models, achieving robust classification accuracy on multi-channel MIT-BIH dataset signal recordings."
 
-* Style Example 3 (Productivity Systems):
-  - Name: "Smart Planner for Student Productivity"
-  - Tech: ["React", "Tailwind CSS", "TypeScript"]
+* Style Example 3 (Custom Developer Tooling):
+  - Name: "GitResume: Production-Ready ATS Resume Architect"
+  - Tech: ["FastAPI", "Python", "React", "Docker", "Render", "Jinja2"]
   - Bullets:
-    * "Developed a structured productivity planner for task scheduling and exam tracking using React."
-    * "Designed modular UI components and dashboard-style interfaces for tracking productivity and workflow efficiency."
-    * "Exploring AI-based intelligent scheduling and adaptive task prioritization features."
+    * "Designed custom Jinja2 template compiling layers to dynamically translate complex, nested JSON schemas into compilable LaTeX (.tex) source code for Overleaf integration."
+    * "Orchestrated Docker container configurations for FastAPI backends and multi-stage Node/Vite frontends, securing seamless zero-configuration blueprints on Render free tiers."
+    * "Decoupled Git commit history parsers to harvest code-centric patches and dependencies, upgrading generated bullet points with deep codebase intelligence."
 
 Use these style examples strictly as standard guidelines. For each repository, dynamically analyze the candidate's actual files, topics, and code patches to synthesize a professional name, compile all utilized libraries, and write highly specific, authentic engineering highlights. Avoid robotic prefixes or plain commit copies (like "Initial commit" or "Contributed code: feat").
 
