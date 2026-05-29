@@ -100,6 +100,84 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
     ? 'http://localhost:5000/api' 
     : '/api');
 
+interface TailorDiffItem {
+  id: string;
+  type: 'summary' | 'project_bullet' | 'experience_bullet';
+  path: string[];
+  parentName?: string;
+  original: string;
+  tailored: string;
+  status: 'pending' | 'accepted' | 'rejected';
+}
+
+const generateTailorDiffs = (original: any, tailored: any): TailorDiffItem[] => {
+  const diffs: TailorDiffItem[] = [];
+
+  // 1. Compare Summary
+  if (original.summary && tailored.summary && original.summary.trim() !== tailored.summary.trim()) {
+    diffs.push({
+      id: 'summary',
+      type: 'summary',
+      path: ['summary'],
+      original: original.summary,
+      tailored: tailored.summary,
+      status: 'pending'
+    });
+  }
+
+  // 2. Compare Projects Bullets
+  const origProjects = original.projects || [];
+  const tailProjects = tailored.projects || [];
+  origProjects.forEach((proj: any, pIdx: number) => {
+    const tailProj = tailProjects.find((tp: any) => tp.name?.toLowerCase() === proj.name?.toLowerCase());
+    if (tailProj && tailProj.bullets) {
+      const origBullets = proj.bullets || [];
+      const tailBullets = tailProj.bullets || [];
+      origBullets.forEach((bullet: string, bIdx: number) => {
+        const tailBullet = tailBullets[bIdx];
+        if (tailBullet && bullet.trim() !== tailBullet.trim()) {
+          diffs.push({
+            id: `proj_${pIdx}_bullet_${bIdx}`,
+            type: 'project_bullet',
+            path: ['projects', String(pIdx), 'bullets', String(bIdx)],
+            parentName: proj.name,
+            original: bullet,
+            tailored: tailBullet,
+            status: 'pending'
+          });
+        }
+      });
+    }
+  });
+
+  // 3. Compare Experience Bullets
+  const origExp = original.experience || [];
+  const tailExp = tailored.experience || [];
+  origExp.forEach((exp: any, eIdx: number) => {
+    const tailE = tailExp.find((te: any) => te.company?.toLowerCase() === exp.company?.toLowerCase());
+    if (tailE && tailE.bullets) {
+      const origBullets = exp.bullets || [];
+      const tailBullets = tailE.bullets || [];
+      origBullets.forEach((bullet: string, bIdx: number) => {
+        const tailBullet = tailBullets[bIdx];
+        if (tailBullet && bullet.trim() !== tailBullet.trim()) {
+          diffs.push({
+            id: `exp_${eIdx}_bullet_${bIdx}`,
+            type: 'experience_bullet',
+            path: ['experience', String(eIdx), 'bullets', String(bIdx)],
+            parentName: exp.company,
+            original: bullet,
+            tailored: tailBullet,
+            status: 'pending'
+          });
+        }
+      });
+    }
+  });
+
+  return diffs;
+};
+
 function App() {
   // Navigation & Login States
   const [username, setUsername] = useState('');
@@ -119,6 +197,8 @@ function App() {
   const [jobDescription, setJobDescription] = useState('');
   const [isTailoring, setIsTailoring] = useState(false);
   const [tailorSuccess, setTailorSuccess] = useState(false);
+  const [tailorDiffs, setTailorDiffs] = useState<TailorDiffItem[]>([]);
+  const [showTailorReviewModal, setShowTailorReviewModal] = useState(false);
 
   // Version Control States
   const [savedVersions, setSavedVersions] = useState<SavedVersion[]>([]);
@@ -298,7 +378,15 @@ function App() {
       }
 
       const tailoredData = await res.json();
-      setResumeData(tailoredData);
+      const generated = generateTailorDiffs(resumeData, tailoredData);
+      
+      if (generated.length === 0) {
+        alert('AI tailoring complete! Your resume is already fully keyword-optimized for this job description.');
+        return;
+      }
+      
+      setTailorDiffs(generated);
+      setShowTailorReviewModal(true);
       setTailorSuccess(true);
       setTimeout(() => setTailorSuccess(false), 3000);
     } catch (err: any) {
@@ -307,6 +395,51 @@ function App() {
     } finally {
       setIsTailoring(false);
     }
+  };
+
+  const handleToggleDiffStatus = (id: string, status: 'accepted' | 'rejected') => {
+    setTailorDiffs(prev => prev.map(diff => {
+      if (diff.id === id) {
+        return { ...diff, status };
+      }
+      return diff;
+    }));
+  };
+
+  const applyTailoredSuggestions = () => {
+    if (!resumeData) return;
+    
+    // Deep clone resumeData
+    const updatedResume = JSON.parse(JSON.stringify(resumeData));
+    
+    let appliedCount = 0;
+    tailorDiffs.forEach(diff => {
+      if (diff.status === 'accepted') {
+        appliedCount++;
+        const [section, indexStr, field, bulletIndexStr] = diff.path;
+        
+        if (section === 'summary') {
+          updatedResume.summary = diff.tailored;
+        } else if (section === 'projects') {
+          const pIdx = Number(indexStr);
+          const bIdx = Number(bulletIndexStr);
+          if (updatedResume.projects && updatedResume.projects[pIdx] && updatedResume.projects[pIdx].bullets) {
+            updatedResume.projects[pIdx].bullets[bIdx] = diff.tailored;
+          }
+        } else if (section === 'experience') {
+          const eIdx = Number(indexStr);
+          const bIdx = Number(bulletIndexStr);
+          if (updatedResume.experience && updatedResume.experience[eIdx] && updatedResume.experience[eIdx].bullets) {
+            updatedResume.experience[eIdx].bullets[bIdx] = diff.tailored;
+          }
+        }
+      }
+    });
+    
+    setResumeData(updatedResume);
+    setShowTailorReviewModal(false);
+    setTailorDiffs([]);
+    alert(`Successfully applied ${appliedCount} keyword-optimized enhancements to your resume!`);
   };
 
   // Save named resume version
@@ -1588,6 +1721,159 @@ function App() {
               </div>
             )}
             <button className="btn btn-secondary" style={{ width: '100%', marginTop: '1.5rem' }} onClick={() => setShowVersionsModal(false)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* AI TAILOR DIFF REVIEW MODAL */}
+      {showTailorReviewModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-lg)', padding: '2rem', maxWidth: '850px', width: '90%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-light)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)' }}>✨ Interactive AI Resume Optimizer</h4>
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Review and selectively accept or reject keyword-tailored optimizations below.
+                </p>
+              </div>
+              <button className="btn-icon" onClick={() => { setShowTailorReviewModal(false); setTailorDiffs([]); }} style={{ fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+            </div>
+            
+            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '0.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {tailorDiffs.map(diff => (
+                <div key={diff.id} style={{
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '1.25rem',
+                  background: 'rgba(255, 255, 255, 0.01)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem'
+                }}>
+                  {/* Item Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {diff.type === 'summary' ? '📝 Professional Summary' : `🎯 Project: ${diff.parentName}`}
+                    </span>
+                    
+                    {/* Status Badge */}
+                    <span style={{
+                      fontSize: '0.7rem',
+                      fontWeight: 'bold',
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: '4px',
+                      background: diff.status === 'accepted' ? 'rgba(16, 185, 129, 0.1)' : diff.status === 'rejected' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                      color: diff.status === 'accepted' ? '#10b981' : diff.status === 'rejected' ? '#ef4444' : '#f59e0b',
+                      border: `1px solid ${diff.status === 'accepted' ? 'rgba(16, 185, 129, 0.2)' : diff.status === 'rejected' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)'}`
+                    }}>
+                      {diff.status.toUpperCase()}
+                    </span>
+                  </div>
+                  
+                  {/* Comparison Panels */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    {/* Original */}
+                    <div style={{
+                      background: 'rgba(239, 68, 68, 0.02)',
+                      border: '1px solid rgba(239, 68, 68, 0.15)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '0.75rem 1rem',
+                      fontSize: '0.85rem',
+                      color: 'rgba(255, 255, 255, 0.65)',
+                      lineHeight: '1.5',
+                      position: 'relative'
+                    }}>
+                      <span style={{ position: 'absolute', top: '-0.5rem', left: '0.75rem', background: 'var(--bg-surface)', padding: '0 0.4rem', fontSize: '0.65rem', color: '#ef4444', fontWeight: 'bold' }}>ORIGINAL</span>
+                      {diff.original}
+                    </div>
+                    {/* Tailored */}
+                    <div style={{
+                      background: 'rgba(16, 185, 129, 0.03)',
+                      border: '1px solid rgba(16, 185, 129, 0.2)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '0.75rem 1rem',
+                      fontSize: '0.85rem',
+                      color: 'var(--text-primary)',
+                      lineHeight: '1.5',
+                      position: 'relative'
+                    }}>
+                      <span style={{ position: 'absolute', top: '-0.5rem', left: '0.75rem', background: 'var(--bg-surface)', padding: '0 0.4rem', fontSize: '0.65rem', color: '#10b981', fontWeight: 'bold' }}>ATS SUGGESTION</span>
+                      {diff.tailored}
+                    </div>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', gap: '0.75rem', alignSelf: 'flex-end', marginTop: '0.25rem' }}>
+                    <button 
+                      onClick={() => handleToggleDiffStatus(diff.id, 'rejected')}
+                      style={{
+                        padding: '0.4rem 1rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        border: '1px solid var(--border-light)',
+                        borderRadius: 'var(--radius-sm)',
+                        background: diff.status === 'rejected' ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
+                        color: diff.status === 'rejected' ? '#ef4444' : 'var(--text-muted)',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}
+                    >
+                      ✗ Reject
+                    </button>
+                    <button 
+                      onClick={() => handleToggleDiffStatus(diff.id, 'accepted')}
+                      style={{
+                        padding: '0.4rem 1rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        border: '1px solid var(--border-light)',
+                        borderRadius: 'var(--radius-sm)',
+                        background: diff.status === 'accepted' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                        color: diff.status === 'accepted' ? '#10b981' : 'var(--text-primary)',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}
+                    >
+                      ✓ Accept
+                    </button>
+                  </div>
+                  
+                </div>
+              ))}
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-light)', paddingTop: '1.25rem', marginTop: '1.5rem' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                {tailorDiffs.filter(d => d.status === 'accepted').length} accepted,{' '}
+                {tailorDiffs.filter(d => d.status === 'rejected').length} rejected,{' '}
+                {tailorDiffs.filter(d => d.status === 'pending').length} remaining
+              </span>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => { setShowTailorReviewModal(false); setTailorDiffs([]); }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="btn btn-primary"
+                  onClick={applyTailoredSuggestions}
+                  disabled={tailorDiffs.filter(d => d.status === 'accepted').length === 0}
+                  style={{
+                    opacity: tailorDiffs.filter(d => d.status === 'accepted').length === 0 ? 0.5 : 1,
+                    cursor: tailorDiffs.filter(d => d.status === 'accepted').length === 0 ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Apply Accepted Suggestions
+                </button>
+              </div>
+            </div>
+            
           </div>
         </div>
       )}
