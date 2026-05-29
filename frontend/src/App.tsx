@@ -570,7 +570,7 @@ function App() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">GitHub OAuth Token (Optional)</label>
+                <label className="form-label">GitHub OAuth Token </label>
                 <input 
                   type="password" 
                   className="form-control" 
@@ -581,7 +581,7 @@ function App() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Groq API Key (Optional)</label>
+                <label className="form-label">Groq API Key </label>
                 <input 
                   type="password" 
                   className="form-control" 
