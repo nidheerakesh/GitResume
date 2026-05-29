@@ -192,7 +192,7 @@ The generated output must feel:
    Follow these absolute rules for bullet points:
    - Use strong action verbs. Sound like an experienced engineer.
    - Focus on achievements and implementation details.
-   - NEVER MENTION: README files, folder structures, project organization, git workflows, repository layouts, filenames, documentation files, or roadmap files.
+   - NEVER MENTION OR COPY: git workflows, pull request merges, git log boilerplate, commit messages, branch syncs, folder structures, project organization, repository layouts, filenames, documentation files, or roadmap files (e.g. NEVER output bullet points like "Implemented merge pull request #2" or "Merged branch 'main'").
    - Structure each bullet following Google's formula: **"Accomplished [X], as measured/quantified by [Y], by executing [Z]"** (when quantifiable evidence is present), or soundly describe the deep technical implementation.
    - Sound like a senior engineer describing their systems to a tech lead, free of generic filler.
 
@@ -387,7 +387,7 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
             msg_lower = first_line.lower()
             
             # Ignore generic Git boilerplate noise completely
-            if any(term in msg_lower for term in ["initial commit", "add files via upload", "update readme", "merge branch", "rename files", "cleanup", "fix typo", "delete", "remove unused", "rename ", "wip", "temp", "todo", "minor"]):
+            if any(term in msg_lower for term in ["initial commit", "add files via upload", "update readme", "merge branch", "merge pull request", "pull request", "merge ", " branch", "rename files", "cleanup", "fix typo", "delete", "remove unused", "rename ", "wip", "temp", "todo", "minor", "dependencies", "copilot"]):
                 return None
             
             # Strip standard prefix tags

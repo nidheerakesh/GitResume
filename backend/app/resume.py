@@ -188,6 +188,7 @@ LATEX_TEMPLATE = r"""%-------------------------
 \section{Projects}
 \resumeSubHeadingListStart
 <% for project in projects %>
+<% if not project.hidden %>
 \resumeProject
 {<< project.name >>}
 {<< project.tech | join(', ') >>}
@@ -198,6 +199,7 @@ LATEX_TEMPLATE = r"""%-------------------------
 \item[$\bullet$] << bullet >>
 <% endfor %>
 \resumeItemListEnd
+<% endif %>
 <% endfor %>
 \resumeSubHeadingListEnd
 \vspace{-5.5mm}

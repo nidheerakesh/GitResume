@@ -234,21 +234,29 @@ class GitHubAnalyzer:
                 for lang, count in sorted(languages_dict.items(), key=lambda x: x[1], reverse=True)
             ]
 
-        # 3. Top projects
+        # 3. Top projects (Filtered to include only repositories with active candidate commits)
         sorted_repos = sorted(repos, key=lambda x: x.get("stargazers_count", 0), reverse=True)
         top_projects = []
-        for repo in sorted_repos[:5]: # Take top 5 repos
-            desc = repo.get("description") or ""
+        for repo in sorted_repos:
+            if len(top_projects) >= 5:
+                break
+                
             owner = repo.get("owner", {}).get("login")
             name = repo.get("name")
+            
+            # Fetch user commits first to verify active participation
+            commits = self.fetch_user_commits(owner, name, username)
+            
+            # Skip repository if the candidate has 0 commits to it (ensures zero contribution repos are ignored)
+            if not commits:
+                continue
+                
+            desc = repo.get("description") or ""
             
             # Fetch deep code context: README, languages, file tree, dependencies, source code
             default_branch = repo.get("default_branch", "main")
             readme_content = self.fetch_repo_readme(owner, name)
             repo_context = self.fetch_repo_context(owner, name, default_branch)
-            
-            # Programmatically query their real commits in this repository
-            commits = self.fetch_user_commits(owner, name, username)
             
             top_projects.append({
                 "name": name,

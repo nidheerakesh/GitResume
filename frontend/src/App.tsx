@@ -905,9 +905,31 @@ function App() {
                 {activeTab === 'projects' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     {projectsList.map((project, pIdx) => (
-                      <div key={pIdx} style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+                      <div key={pIdx} style={{ 
+                        background: 'rgba(255,255,255,0.02)', 
+                        padding: '1rem', 
+                        borderRadius: 'var(--radius-sm)', 
+                        border: '1px solid var(--border-light)',
+                        opacity: project.hidden ? 0.55 : 1,
+                        transition: 'opacity 0.2s ease'
+                      }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                          <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>Project #{pIdx + 1}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <input 
+                              type="checkbox" 
+                              id={`proj-toggle-${pIdx}`}
+                              checked={project.hidden !== true} 
+                              onChange={(e) => {
+                                const updated = [...projectsList];
+                                updated[pIdx].hidden = !e.target.checked;
+                                setResumeData({ ...resumeData, projects: updated });
+                              }}
+                              style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                            />
+                            <label htmlFor={`proj-toggle-${pIdx}`} style={{ fontWeight: 'bold', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.95rem' }}>
+                              Include Project #{pIdx + 1} ({project.name || 'Untitled'})
+                            </label>
+                          </div>
                           <button className="btn-icon btn-delete" onClick={() => {
                             const updated = projectsList.filter((_, idx) => idx !== pIdx);
                             setResumeData({ ...resumeData, projects: updated });
@@ -1357,10 +1379,10 @@ function App() {
                   )}
 
                   {/* PROJECTS */}
-                  {projectsList.length > 0 && (
+                  {projectsList.filter(p => !p.hidden).length > 0 && (
                     <div className="resume-p-section">
                       <h4 className="resume-p-sec-title">Projects</h4>
-                      {projectsList.map((p, idx) => (
+                      {projectsList.filter(p => !p.hidden).map((p, idx) => (
                         <div key={idx} className="resume-p-item">
                           <div className="resume-p-row resume-p-bold">
                             <span>{p.name}</span>
