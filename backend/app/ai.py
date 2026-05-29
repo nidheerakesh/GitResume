@@ -95,6 +95,8 @@ class ResumeTailor:
             file_tree = r.get("file_tree", [])
             dependencies = r.get("dependencies", [])
             
+            source_code = r.get("source_code", [])
+            
             repos_str += f"- Repository: {r.get('name')}\n"
             repos_str += f"  - Description: {r.get('description')}\n"
             repos_str += f"  - Stars: {r.get('stars', 0) or r.get('stargazers_count', 0)}\n"
@@ -119,6 +121,13 @@ class ResumeTailor:
                 # Clean markdown headers for readability
                 clean_readme = readme.replace('#', '').strip()
                 repos_str += f"  - README Documentation:\n    {clean_readme[:1200]}\n"
+                
+            # Deep code context: Actual Source Code implementations
+            if source_code:
+                repos_str += "  - Key Source Code Files (Actual Implementation Details):\n"
+                for src in source_code:
+                    repos_str += f"    * File: {src['file']}\n"
+                    repos_str += f"      ```\n{src['code']}\n      ```\n"
             
             # Commit evidence (recent code changes)
             if commits:
@@ -135,7 +144,7 @@ class ResumeTailor:
                     else:
                         repos_str += f"    * Commit {idx}: \"{c_data}\"\n"
             
-            repos_str += f"  - CRITICAL RULE: Use ALL the above context (README, dependencies, file structure, language breakdown, AND commits) to write project bullet points that accurately describe what the project does, what technologies it uses, and how the candidate built it. The description should reflect the full scope of the project, not just the last few commits.\n"
+            repos_str += f"  - CRITICAL RULE: Use ALL the above context (Source Code, README, dependencies, file structure, language breakdown, AND commits) to write project bullet points that accurately describe what the project does, what technologies it uses, and how the candidate built it. Analyze the actual Source Code provided to write highly technical, accurate bullet points that reflect the true system architecture and implementation details! The description should reflect the full scope of the codebase.\n"
             repos_str += "\n"
 
         lang_str = ", ".join([f"{l['name']} ({l['percentage']}%)" for l in analysis.get("languages", [])])

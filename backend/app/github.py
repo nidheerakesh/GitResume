@@ -105,14 +105,15 @@ class GitHubAnalyzer:
             print(f"Failed to fetch README for {owner}/{repo}: {e}")
         return ""
 
-    def fetch_repo_context(self, owner: str, repo: str) -> dict:
+    def fetch_repo_context(self, owner: str, repo: str, default_branch: str = "main") -> dict:
         """
         Fetches deep code context for a repository:
         - Language breakdown (bytes per language)
         - Root file listing (project structure)
         - Key dependency files (package.json deps, requirements.txt)
+        - Actual source code samples (e.g., main.py, app.tsx) for deep AI code analysis
         """
-        context = {"languages": {}, "file_tree": [], "dependencies": []}
+        context = {"languages": {}, "file_tree": [], "dependencies": [], "source_code": []}
         
         try:
             # 1. Language breakdown (bytes per language)
@@ -121,28 +122,31 @@ class GitHubAnalyzer:
             if lang_res.status_code == 200:
                 context["languages"] = lang_res.json()
             
-            # 2. Root directory listing (project structure)
-            contents_url = f"https://api.github.com/repos/{owner}/{repo}/contents"
-            contents_res = requests.get(contents_url, headers=self.headers)
-            if contents_res.status_code == 200:
-                items = contents_res.json()
-                if isinstance(items, list):
-                    context["file_tree"] = [item.get("name", "") for item in items[:30]]
-                    
-                    # 3. Try to fetch dependency files for tech stack detection
-                    dep_files = {
-                        "package.json": None,
-                        "requirements.txt": None,
-                        "Pipfile": None,
-                        "pyproject.toml": None,
-                    }
-                    for item in items:
-                        fname = item.get("name", "")
-                        if fname in dep_files and item.get("download_url"):
+            # 2. Recursive tree listing (project structure & source files)
+            tree_url = f"https://api.github.com/repos/{owner}/{repo}/git/trees/{default_branch}?recursive=1"
+            tree_res = requests.get(tree_url, headers=self.headers)
+            if tree_res.status_code == 200:
+                items = tree_res.json().get("tree", [])
+                
+                # File tree: limit to top level or interesting dirs
+                context["file_tree"] = [item["path"] for item in items if "/" not in item["path"] or item["path"].startswith("src/")]
+                
+                # 3. Fetch dependencies and source code
+                dep_files = ["package.json", "requirements.txt", "Pipfile", "pyproject.toml"]
+                source_exts = (".py", ".ts", ".tsx", ".js", ".jsx", ".go", ".rs", ".java", ".cpp", ".c", ".h")
+                
+                source_candidates = []
+                
+                for item in items:
+                    path = item["path"]
+                    if item["type"] == "blob":
+                        # Fetch dependencies
+                        fname = path.split("/")[-1]
+                        if fname in dep_files:
                             try:
-                                dep_res = requests.get(item["download_url"], timeout=5)
+                                raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{default_branch}/{path}"
+                                dep_res = requests.get(raw_url, timeout=5)
                                 if dep_res.status_code == 200:
-                                    dep_content = dep_res.text[:1000]  # Truncate
                                     if fname == "package.json":
                                         import json
                                         try:
@@ -152,7 +156,7 @@ class GitHubAnalyzer:
                                         except:
                                             pass
                                     elif fname == "requirements.txt":
-                                        lines = dep_content.strip().split("\n")
+                                        lines = dep_res.text.strip().split("\n")
                                         for line in lines:
                                             line = line.strip()
                                             if line and not line.startswith("#"):
@@ -161,6 +165,34 @@ class GitHubAnalyzer:
                                                     context["dependencies"].append(pkg_name)
                             except:
                                 pass
+                        
+                        # Collect source candidates
+                        if fname.endswith(source_exts) and "test" not in path.lower() and "node_modules" not in path.lower():
+                            source_candidates.append(path)
+                
+                # 4. Fetch up to 2 interesting source files for deep AI analysis
+                # Prioritize 'main', 'app', 'index', or files in 'src'
+                def score_source(path):
+                    score = 0
+                    lower_path = path.lower()
+                    if "src/" in lower_path or "app/" in lower_path: score += 10
+                    if "main" in lower_path or "index" in lower_path or "app" in lower_path: score += 20
+                    return score
+                
+                source_candidates.sort(key=score_source, reverse=True)
+                
+                for path in source_candidates[:2]:
+                    try:
+                        raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{default_branch}/{path}"
+                        src_res = requests.get(raw_url, timeout=5)
+                        if src_res.status_code == 200:
+                            # Truncate source to 1500 chars to avoid exceeding token limits
+                            context["source_code"].append({
+                                "file": path,
+                                "code": src_res.text[:1500]
+                            })
+                    except:
+                        pass
         except Exception as e:
             print(f"Failed to fetch repo context for {owner}/{repo}: {e}")
         
@@ -210,9 +242,10 @@ class GitHubAnalyzer:
             owner = repo.get("owner", {}).get("login")
             name = repo.get("name")
             
-            # Fetch deep code context: README, languages, file tree, dependencies
+            # Fetch deep code context: README, languages, file tree, dependencies, source code
+            default_branch = repo.get("default_branch", "main")
             readme_content = self.fetch_repo_readme(owner, name)
-            repo_context = self.fetch_repo_context(owner, name)
+            repo_context = self.fetch_repo_context(owner, name, default_branch)
             
             # Programmatically query their real commits in this repository
             commits = self.fetch_user_commits(owner, name, username)
@@ -229,7 +262,8 @@ class GitHubAnalyzer:
                 "readme": readme_content,
                 "repo_languages": repo_context.get("languages", {}),
                 "file_tree": repo_context.get("file_tree", []),
-                "dependencies": repo_context.get("dependencies", [])
+                "dependencies": repo_context.get("dependencies", []),
+                "source_code": repo_context.get("source_code", [])
             })
 
         # 4. Detected Skills
