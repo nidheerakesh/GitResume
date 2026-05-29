@@ -284,7 +284,7 @@ def sanitize_latex(text: str) -> str:
 
 def generate_resume_latex(data: dict) -> str:
     """
-    Takes structural resume data and generates compiled LaTeX string using the custom IIT Guwahati style.
+    Takes structural resume data and generates compiled, ATS-ready LaTeX source code.
     """
     # Create a deep copy to sanitize
     sanitized_data = {}
@@ -327,10 +327,7 @@ def generate_resume_latex(data: dict) -> str:
     if "achievements" not in sanitized_data:
         sanitized_data["achievements"] = []
     if "coursework" not in sanitized_data:
-        sanitized_data["coursework"] = {
-            "cs": "Deep Learning, Data Structures and Algorithms, Databases, Operating Systems, Computer Networks",
-            "math": "Optimization, Discrete Maths, Probability and Random Processes, Number Theory, Linear Algebra"
-        }
+        sanitized_data["coursework"] = {"cs": "", "math": ""}
     if "positions" not in sanitized_data:
         sanitized_data["positions"] = []
     

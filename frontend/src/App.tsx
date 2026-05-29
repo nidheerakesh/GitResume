@@ -1277,7 +1277,7 @@ function App() {
                       />
                     )}
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-                      💡 This LaTeX matches your premium IIT Guwahati format. You can edit this code directly in the editor above, copy it, or download it as a .tex file.
+                      💡 This is real, compilable LaTeX (.tex) source code. You can edit it directly above, copy it, or download it as a .tex file. Paste into <a href="https://www.overleaf.com" target="_blank" style={{color: 'var(--accent)'}}>Overleaf</a> to compile a PDF instantly.
                     </p>
                   </div>
                 )}
