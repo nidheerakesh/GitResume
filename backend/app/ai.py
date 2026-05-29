@@ -463,28 +463,24 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                         verb = action_verbs[i % len(action_verbs)]
                         bullets.append(f"{verb} {msg_body[0].lower() + msg_body[1:]}")
 
-            # Fill remaining bullets from README, description, dependencies, and file structure
+            # Fill remaining bullets safely without mentioning folders, filenames, readmes, or git workflows
             tech_str = ', '.join(techs[:5]) if techs else 'standard tooling'
             while len(bullets) < 3:
                 if len(bullets) == 0:
                     if readme_summary:
-                        bullets.append(f"Built {p_name}: {readme_summary}.")
+                        bullets.append(f"Built and deployed {p_name} to optimize system logic and expand feature sets.")
                     elif desc and len(desc) > 10:
-                        bullets.append(f"Developed {p_name}: {desc[:120]}.")
+                        bullets.append(f"Developed {p_name} to handle system-critical operations using {tech_str}.")
                     else:
-                        bullets.append(f"Built and maintained {p_name} using {tech_str}.")
+                        bullets.append(f"Built and maintained core functionalities for {p_name} using {tech_str}.")
                 elif len(bullets) == 1:
                     if deps:
-                        dep_str = ', '.join(deps[:6])
-                        bullets.append(f"Leveraged {dep_str} for core application logic, data handling, and module design.")
+                        dep_str = ', '.join(deps[:4])
+                        bullets.append(f"Integrated and configured {dep_str} libraries to implement reliable data structures and modular APIs.")
                     else:
-                        bullets.append(f"Leveraged {tech_str} for core application logic, data handling, and module design.")
+                        bullets.append(f"Leveraged {tech_str} to implement robust system architectures and optimize data pipeline handling.")
                 else:
-                    if file_tree:
-                        structure_hint = ', '.join([f for f in file_tree if not f.startswith('.')][:5])
-                        bullets.append(f"Architected modular project structure ({structure_hint}) with Git-based version control workflows.")
-                    else:
-                        bullets.append(f"Managed version control workflows with Git, including branching strategies and code reviews.")
+                    bullets.append(f"Optimized application logic and refactored core interfaces to ensure clean separation of concerns and high runtime efficiency.")
 
             mock_projects.append({
                 "name": p_name,
