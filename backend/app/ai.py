@@ -434,53 +434,46 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                 if lines:
                     readme_summary = ' '.join(lines[:3])[:200]
 
-            # Dynamic rephraser for ALL repositories
-            commits = p.get("commits", [])
-            valid_commits = []
-            for c in commits:
-                if isinstance(c, dict):
-                    msg = c.get("message")
-                else:
-                    msg = str(c)
-                if msg:
-                    cleaned = clean_commit_msg(msg)
-                    if cleaned:
-                        valid_commits.append(cleaned)
+            # Detect Domain: Machine Learning, Frontend Web, or Backend Web
+            techs_lower = [t.lower() for t in techs]
+            deps_lower = [d.lower() for d in deps]
+            
+            is_ml = any(t in techs_lower or t in deps_lower for t in ["torch", "pytorch", "tensorflow", "keras", "scikit-learn", "numpy", "pandas", "opencv", "diffusers", "nlp", "ml", "ai"])
+            is_frontend = any(t in techs_lower or t in deps_lower for t in ["react", "vue", "angular", "nextjs", "next.js", "svelte", "html", "css", "tailwind", "typescript", "javascript"])
+            is_backend = any(t in techs_lower or t in deps_lower for t in ["fastapi", "flask", "django", "express", "node", "spring", "python", "postgresql", "mysql", "mongodb", "redis", "sqlite", "prisma", "convex"])
 
             bullets = []
-            action_verbs = ["Implemented", "Developed", "Designed"]
-            if valid_commits:
-                for i, c_msg in enumerate(valid_commits[:3]):
-                    # Strip leading verbs to avoid "Implemented implement..." doubling
-                    leading_verbs = ["implement ", "add ", "fix ", "update ", "create ", "refactor ", "move ", "set ", "change ", "integrate ", "apply ", "migrate "]
-                    msg_body = c_msg
-                    for lv in leading_verbs:
-                        if msg_body.lower().startswith(lv):
-                            msg_body = msg_body[len(lv):]
-                            msg_body = msg_body[0].upper() + msg_body[1:] if msg_body else msg_body
-                            break
-                    if msg_body and len(msg_body) > 8:
-                        verb = action_verbs[i % len(action_verbs)]
-                        bullets.append(f"{verb} {msg_body[0].lower() + msg_body[1:]}")
+            tech_str = ', '.join(techs[:3]) if techs else 'standard tools'
+            
+            # Bullet 1: Primary goal and architecture
+            clean_desc = desc if desc and len(desc) > 8 else (readme_summary if readme_summary and len(readme_summary) > 8 else "advanced engineering systems")
+            # Remove trailing period if present for formatting
+            if clean_desc.endswith('.'):
+                clean_desc = clean_desc[:-1]
 
-            # Fill remaining bullets safely without mentioning folders, filenames, readmes, or git workflows
-            tech_str = ', '.join(techs[:5]) if techs else 'standard tooling'
-            while len(bullets) < 3:
-                if len(bullets) == 0:
-                    if readme_summary:
-                        bullets.append(f"Built and deployed {p_name} to optimize system logic and expand feature sets.")
-                    elif desc and len(desc) > 10:
-                        bullets.append(f"Developed {p_name} to handle system-critical operations using {tech_str}.")
-                    else:
-                        bullets.append(f"Built and maintained core functionalities for {p_name} using {tech_str}.")
-                elif len(bullets) == 1:
-                    if deps:
-                        dep_str = ', '.join(deps[:4])
-                        bullets.append(f"Integrated and configured {dep_str} libraries to implement reliable data structures and modular APIs.")
-                    else:
-                        bullets.append(f"Leveraged {tech_str} to implement robust system architectures and optimize data pipeline handling.")
-                else:
-                    bullets.append(f"Optimized application logic and refactored core interfaces to ensure clean separation of concerns and high runtime efficiency.")
+            if is_ml:
+                bullets.append(f"Engineered an advanced machine learning architecture for {p_name} to execute high-fidelity data modeling and feature processing using {tech_str}.")
+            elif is_backend:
+                bullets.append(f"Architected a scalable, high-throughput backend service for {p_name} using {tech_str} to handle system-critical APIs and performant data storage.")
+            elif is_frontend:
+                bullets.append(f"Designed and developed a premium, responsive frontend client interface for {p_name} leveraging {tech_str} to deliver seamless client-side state management and optimal user experience.")
+            else:
+                bullets.append(f"Engineered and deployed the {p_name} application using {tech_str} to deliver modular, high-performance system capabilities and clean separation of concerns.")
+
+            # Bullet 2: Specific library integration and system features
+            if deps:
+                dep_str = ', '.join(deps[:3])
+                bullets.append(f"Integrated and configured {dep_str} libraries to implement reliable system integrations, strict type safety, and modular API contracts.")
+            else:
+                bullets.append(f"Constructed high-speed data flow layers and custom utility pipelines to accelerate execution efficiency and secure data synchronization.")
+
+            # Bullet 3: Optimization, performance, and best practices
+            if is_ml:
+                bullets.append(f"Optimized training pipelines and inference execution routines, enhancing speed metrics and data loading latency for maximum runtime throughput.")
+            elif is_backend:
+                bullets.append(f"Refactored database query architectures and caching strategies, reducing latency metrics and safeguarding thread-safe operations in production.")
+            else:
+                bullets.append(f"Optimized overall compilation pipelines and asset loading speeds, implementing modular clean code structures for long-term maintainability.")
 
             mock_projects.append({
                 "name": p_name,
