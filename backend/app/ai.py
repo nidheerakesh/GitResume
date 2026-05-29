@@ -404,24 +404,81 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                 return cleaned
             return None
 
-        for p in analysis.get("top_projects", [])[:3]:
-            techs = p.get("topics", [])
-            deps = p.get("dependencies", [])
+        def clean_tech_name(name: str) -> str:
+            name_lower = name.lower()
+            # Skip standard developer tool/type definition noise completely
+            ignore_list = [
+                "types/", "eslint", "prettier", "tsconfig", "vite", "typescript", 
+                "jest", "testing-library", "nodemon", "webpack", "babel", "postcss", 
+                "autoprefixer", "rimraf", "concurrently", "cross-env", "dotenv"
+            ]
+            if any(ignore in name_lower for ignore in ignore_list):
+                return None
+                
+            # Clean common scoped packages (e.g. @google/genai -> Google GenAI)
+            mappings = {
+                "fastapi": "FastAPI",
+                "pydantic": "Pydantic",
+                "openai": "OpenAI API",
+                "jinja2": "Jinja2",
+                "requests": "Requests",
+                "react": "React",
+                "react-dom": "React DOM",
+                "google/genai": "Google GenAI",
+                "next": "Next.js",
+                "tailwindcss": "Tailwind CSS",
+                "convex": "Convex",
+                "python": "Python",
+                "shell": "Shell Scripting",
+                "bash": "Bash Scripting",
+                "uvicorn": "Uvicorn"
+            }
+            
+            clean = name
+            if clean.startswith("@"):
+                clean = clean[1:]
+                
+            if clean.lower() in mappings:
+                return mappings[clean.lower()]
+                
+            # Clean up hyphenated package names
+            clean = clean.replace('-', ' ').replace('_', ' ')
+            return ' '.join(word.capitalize() for word in clean.split())
+
+        for pIdx, p in enumerate(analysis.get("top_projects", [])[:3]):
+            raw_techs = p.get("topics", [])
+            raw_deps = p.get("dependencies", [])
             readme = p.get("readme", "")
             repo_langs = p.get("repo_languages", {})
             file_tree = p.get("file_tree", [])
             
-            # Build tech list from multiple sources: topics, dependencies, repo languages
-            if deps:
-                techs = list(set(techs + deps[:10]))
-            if not techs and p.get("language"):
-                techs = [p.get("language")]
+            # Combine topics and dependencies
+            if raw_deps:
+                raw_techs = list(set(raw_techs + raw_deps[:10]))
+            if not raw_techs and p.get("language"):
+                raw_techs = [p.get("language")]
             if repo_langs:
                 for lang in repo_langs.keys():
-                    if lang not in techs:
-                        techs.append(lang)
+                    if lang not in raw_techs:
+                        raw_techs.append(lang)
+            if not raw_techs:
+                raw_techs = ["Git", "GitHub"]
+
+            # Filter and clean package names
+            techs = []
+            for t in raw_techs:
+                cleaned = clean_tech_name(t)
+                if cleaned and cleaned not in techs:
+                    techs.append(cleaned)
             if not techs:
                 techs = ["Git", "GitHub"]
+
+            # Filter and clean dependencies specifically
+            deps = []
+            for d in raw_deps:
+                cleaned = clean_tech_name(d)
+                if cleaned and cleaned not in deps:
+                    deps.append(cleaned)
 
             p_name = p.get("name", "Project")
             desc = p.get("description", "")
@@ -438,42 +495,104 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
             techs_lower = [t.lower() for t in techs]
             deps_lower = [d.lower() for d in deps]
             
-            is_ml = any(t in techs_lower or t in deps_lower for t in ["torch", "pytorch", "tensorflow", "keras", "scikit-learn", "numpy", "pandas", "opencv", "diffusers", "nlp", "ml", "ai"])
-            is_frontend = any(t in techs_lower or t in deps_lower for t in ["react", "vue", "angular", "nextjs", "next.js", "svelte", "html", "css", "tailwind", "typescript", "javascript"])
-            is_backend = any(t in techs_lower or t in deps_lower for t in ["fastapi", "flask", "django", "express", "node", "spring", "python", "postgresql", "mysql", "mongodb", "redis", "sqlite", "prisma", "convex"])
+            is_ml = any(t in techs_lower or t in deps_lower for t in ["torch", "pytorch", "tensorflow", "keras", "scikit-learn", "numpy", "pandas", "opencv", "diffusers", "nlp", "ml", "ai"]) or any(kw in p_name.lower() or kw in (desc or "").lower() for kw in ["ai", "ml", "machine learning", "deep learning", "neural", "ecg", "heart", "prediction", "classifier"])
+            is_frontend = any(t in techs_lower or t in deps_lower for t in ["react", "vue", "angular", "nextjs", "next.js", "svelte", "html", "css", "tailwind", "typescript", "javascript", "google/genai", "next", "types/react", "react-dom"])
+            is_backend = any(t in techs_lower or t in deps_lower for t in ["fastapi", "flask", "django", "express", "node", "spring", "python", "postgresql", "mysql", "mongodb", "redis", "sqlite", "prisma", "convex", "shell", "bash"])
 
             bullets = []
             tech_str = ', '.join(techs[:3]) if techs else 'standard tools'
+            dep_str = ', '.join(deps[:3]) if deps else ''
             
-            # Bullet 1: Primary goal and architecture
-            clean_desc = desc if desc and len(desc) > 8 else (readme_summary if readme_summary and len(readme_summary) > 8 else "advanced engineering systems")
-            # Remove trailing period if present for formatting
-            if clean_desc.endswith('.'):
-                clean_desc = clean_desc[:-1]
+            # Define rich variation tables for bullet points based on project index
+            # This ensures Project #1, #2, and #3 NEVER look identical!
+            bullet_templates = {
+                "ml": [
+                    [
+                        f"Engineered an advanced machine learning architecture for {p_name} to execute high-fidelity data modeling and feature processing using {tech_str}.",
+                        f"Synthesized a custom artificial intelligence model for {p_name} leveraging {tech_str} to predict and classify core data patterns.",
+                        f"Developed a high-performance deep learning pipeline for {p_name} utilizing {tech_str} to automate complex analytical workflows."
+                    ],
+                    [
+                        f"Integrated and configured {dep_str} libraries to establish robust training configurations and accelerate statistical processing." if deps else "Constructed custom mathematical layers and preprocessing pipelines to refine raw datasets.",
+                        f"Structured scalable neural network parameters and data ingestion layers to support low-latency model evaluations.",
+                        f"Designed high-performance dataset parsers to guarantee reliable validation cycles and prevent overfitting."
+                    ],
+                    [
+                        f"Optimized training pipelines and inference execution routines, enhancing speed metrics for maximum runtime throughput.",
+                        f"Refactored matrix computation strategies to reduce memory footprint and safeguard resource utilization in production.",
+                        f"Enhanced overall prediction accuracy metrics by refining neural layers and implementing modular code practices."
+                    ]
+                ],
+                "backend": [
+                    [
+                        f"Architected a scalable, high-throughput backend service for {p_name} using {tech_str} to handle system-critical operations and performant data storage.",
+                        f"Designed and deployed a modular RESTful API gateway for {p_name} leveraging {tech_str} to establish secure, low-latency endpoints.",
+                        f"Engineered a resilient server-side framework for {p_name} utilizing {tech_str} to automate backend microservices."
+                    ],
+                    [
+                        f"Integrated and configured {dep_str} libraries to implement reliable system integrations, strict type safety, and modular API contracts." if deps else "Constructed robust database handlers and transactional layers to accelerate data persistence.",
+                        f"Configured multi-tier authentication protocols and structured database migrations to guarantee data integrity.",
+                        f"Engineered high-performance web service integrations to support high concurrent load capacities cleanly."
+                    ],
+                    [
+                        f"Refactored database query architectures and caching strategies, reducing latency metrics and safeguarding thread-safe operations in production.",
+                        f"Optimized overall server-side execution cycles, implementing separation of concerns for simplified maintenance.",
+                        f"Enhanced API response benchmarks by establishing micro-caching layers and optimizing structural algorithms."
+                    ]
+                ],
+                "frontend": [
+                    [
+                        f"Designed and developed a premium, responsive client interface for {p_name} leveraging {tech_str} to deliver seamless state management.",
+                        f"Crafted a visually stunning, highly interactive user experience for {p_name} using {tech_str} for pixel-perfect presentation.",
+                        f"Architected an elegant client-side application structure for {p_name} utilizing {tech_str} to support rapid feature scaling."
+                    ],
+                    [
+                        f"Integrated and configured {dep_str} libraries to establish high-fidelity routing, component rendering, and custom state hooks." if deps else "Constructed dynamic UI components and complex event listeners to deliver flawless user interactions.",
+                        f"Engineered custom styling systems and reusable layout patterns to ensure cross-device display consistency.",
+                        f"Optimized modern web rendering pipelines to eliminate layout shifts and deliver lightning-fast interactive states."
+                    ],
+                    [
+                        f"Optimized overall compilation pipelines and asset loading speeds, implementing modular clean code structures for long-term maintainability.",
+                        f"Refactored complex UI flows and rendering cycles to boost responsiveness and lower overall Time-to-Interactive.",
+                        f"Established rigorous component structure guidelines, elevating long-term codebase maintainability."
+                    ]
+                ],
+                "general": [
+                    [
+                        f"Engineered and deployed the {p_name} application using {tech_str} to deliver modular, high-performance system capabilities.",
+                        f"Designed and synthesized the core architecture for {p_name} utilizing {tech_str} to resolve critical execution bottlenecks.",
+                        f"Developed and modularized the {p_name} project using {tech_str} to enable high-efficiency local runs."
+                    ],
+                    [
+                        f"Integrated and configured {dep_str} libraries to establish robust integration layers and modular code patterns." if deps else "Constructed optimized system wrappers and helper scripts to accelerate daily development runs.",
+                        f"Structured robust file parsers and environment configs to streamline local deployment across environments.",
+                        f"Refactored operational logic into decoupled components to improve scalability and reduce coupling."
+                    ],
+                    [
+                        f"Optimized system runtimes and resource management, reducing build times and code complexity.",
+                        f"Enhanced overall execution throughput by establishing modular structures and standard testing targets.",
+                        f"Implemented rigorous code guidelines, ensuring a clean, open-source-ready codebase."
+                    ]
+                ]
+            }
 
+            v_idx = pIdx % 3
             if is_ml:
-                bullets.append(f"Engineered an advanced machine learning architecture for {p_name} to execute high-fidelity data modeling and feature processing using {tech_str}.")
-            elif is_backend:
-                bullets.append(f"Architected a scalable, high-throughput backend service for {p_name} using {tech_str} to handle system-critical APIs and performant data storage.")
+                bullets.append(bullet_templates["ml"][0][v_idx])
+                bullets.append(bullet_templates["ml"][1][v_idx])
+                bullets.append(bullet_templates["ml"][2][v_idx])
             elif is_frontend:
-                bullets.append(f"Designed and developed a premium, responsive frontend client interface for {p_name} leveraging {tech_str} to deliver seamless client-side state management and optimal user experience.")
-            else:
-                bullets.append(f"Engineered and deployed the {p_name} application using {tech_str} to deliver modular, high-performance system capabilities and clean separation of concerns.")
-
-            # Bullet 2: Specific library integration and system features
-            if deps:
-                dep_str = ', '.join(deps[:3])
-                bullets.append(f"Integrated and configured {dep_str} libraries to implement reliable system integrations, strict type safety, and modular API contracts.")
-            else:
-                bullets.append(f"Constructed high-speed data flow layers and custom utility pipelines to accelerate execution efficiency and secure data synchronization.")
-
-            # Bullet 3: Optimization, performance, and best practices
-            if is_ml:
-                bullets.append(f"Optimized training pipelines and inference execution routines, enhancing speed metrics and data loading latency for maximum runtime throughput.")
+                bullets.append(bullet_templates["frontend"][0][v_idx])
+                bullets.append(bullet_templates["frontend"][1][v_idx])
+                bullets.append(bullet_templates["frontend"][2][v_idx])
             elif is_backend:
-                bullets.append(f"Refactored database query architectures and caching strategies, reducing latency metrics and safeguarding thread-safe operations in production.")
+                bullets.append(bullet_templates["backend"][0][v_idx])
+                bullets.append(bullet_templates["backend"][1][v_idx])
+                bullets.append(bullet_templates["backend"][2][v_idx])
             else:
-                bullets.append(f"Optimized overall compilation pipelines and asset loading speeds, implementing modular clean code structures for long-term maintainability.")
+                bullets.append(bullet_templates["general"][0][v_idx])
+                bullets.append(bullet_templates["general"][1][v_idx])
+                bullets.append(bullet_templates["general"][2][v_idx])
 
             mock_projects.append({
                 "name": p_name,
