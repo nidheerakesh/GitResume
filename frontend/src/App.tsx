@@ -423,7 +423,7 @@ function App() {
       console.log('Processing item in apply:', diff.id, 'status:', diff.status);
       if (diff.status === 'accepted') {
         appliedCount++;
-        const [section, indexStr, field, bulletIndexStr] = diff.path;
+        const [section, indexStr, , bulletIndexStr] = diff.path;
         console.log('Applying path:', diff.path, 'with content:', diff.tailored);
         
         if (section === 'summary') {
