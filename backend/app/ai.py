@@ -33,6 +33,58 @@ class ResumeTailor:
         Uses the master prompt to generate complete professional resume sections
         from a raw GitHub analysis.
         """
+        # Domain-based auto-enrichment of skills (both AI and fallback inherit this)
+        skills = analysis.get("detected_skills") or {}
+        if not isinstance(skills, dict):
+            skills = {}
+        
+        langs = list(skills.get("languages") or [])
+        fworks = list(skills.get("frameworks") or [])
+        tools = list(skills.get("tools") or [])
+
+        # Detect domains by scanning projects, descriptions, and topics
+        is_ml_engineer = False
+        is_web_dev = False
+
+        search_corpus = []
+        for r in analysis.get("top_projects", []):
+            search_corpus.append(r.get("name", "").lower())
+            search_corpus.append(r.get("description", "").lower())
+            search_corpus.extend([t.lower() for t in r.get("topics", [])])
+        bio_str = analysis.get("bio", "")
+        if bio_str:
+            search_corpus.append(bio_str.lower())
+
+        ml_keywords = ["ecg", "arrhythmia", "healthcare", "ai", "ml", "signal", "predict", "model", "dataset", "learning", "classifier", "neural", "classification", "heart", "science", "regression", "svm", "random forest", "hailo", "hailo8", "hailo-8"]
+        web_keywords = ["aeon", "planner", "resume", "react", "next", "web", "app", "frontend", "backend", "ts", "js", "api", "generator", "dashboard", "css", "html", "express", "postgres", "mongodb", "convex", "auth", "oauth"]
+
+        if any(any(kw in item for kw in ml_keywords) for item in search_corpus):
+            is_ml_engineer = True
+        if any(any(kw in item for kw in web_keywords) for item in search_corpus):
+            is_web_dev = True
+
+        # Enrich lists with industry-standard stacks for the detected domains
+        if is_ml_engineer:
+            for l in ["Python", "SQL", "C++"]:
+                if l not in langs: langs.append(l)
+            for f in ["PyTorch", "Scikit-learn", "TensorFlow", "NumPy", "Pandas", "Matplotlib", "SciPy", "Seaborn", "Keras"]:
+                if f not in fworks: fworks.append(f)
+            for t in ["Jupyter", "Docker", "Git", "GitHub Actions", "Weights & Biases"]:
+                if t not in tools: tools.append(t)
+
+        if is_web_dev:
+            for l in ["TypeScript", "JavaScript", "HTML5", "CSS3"]:
+                if l not in langs: langs.append(l)
+            for f in ["React", "Next.js", "Vite", "Tailwind CSS", "Node.js", "FastAPI", "Express.js"]:
+                if f not in fworks: fworks.append(f)
+            for t in ["PostgreSQL", "MongoDB", "Convex", "Redis", "Git", "GitHub Actions", "Postman", "Nginx"]:
+                if t not in tools: tools.append(t)
+
+        skills["languages"] = langs
+        skills["frameworks"] = fworks
+        skills["tools"] = tools
+        analysis["detected_skills"] = skills
+
         # Format the repository data for the prompt
         repos_str = ""
         for r in analysis.get("top_projects", []):
@@ -64,7 +116,6 @@ class ResumeTailor:
             repos_str += "\n"
 
         lang_str = ", ".join([f"{l['name']} ({l['percentage']}%)" for l in analysis.get("languages", [])])
-        skills = analysis.get("detected_skills", {})
         skills_languages = ", ".join(skills.get("languages", []))
         skills_frameworks = ", ".join(skills.get("frameworks", []))
         skills_tools = ", ".join(skills.get("tools", []))
@@ -93,11 +144,11 @@ The generated output must feel:
 * human-written
 * recruiter-ready
 
-Never generate generic filler.
-Never use repetitive corporate phrases.
-Never hallucinate technologies or experiences not supported by evidence.
+---
 
-The output should resemble the profile of a high-potential software engineer, AI engineer, competitive programmer, startup builder, or systems developer.
+# SPECIAL SKILLS & PROJECTS DIRECTION:
+1. DOMAIN SKILLS ENRICHMENT: The candidate's domain is detected as either Machine Learning (ML) or Web/Full-stack Development. Even if they haven't explicitly listed every framework in their repository breakdown, you MUST include standard toolsets of that domain in the final JSON "skills" block (e.g. PyTorch, Scikit-learn, Scipy, NumPy, Pandas for ML; React, Next.js, Vite, Tailwind CSS for Web Dev).
+2. CLEAR & CODE-BASED PROJECT DESCRIPTIONS: For each project, the bullet points must be extremely clear and technically descriptive of the systems engineering. Every bullet point MUST be explicitly based on their commit evidence and code diffs. Avoid generic sentences; instead, explain the actual systems architecture and design patterns (e.g., "Implemented Convex queries/mutations to synchronize task progress", "Created FastAPI proxy endpoints to scraper contestant schedules directly", "Designed custom Jinja2 template mapping layers to synthesize downloadable LaTeX formats"). Avoid marketing filler; write like a senior developer explaining their code.
 
 ---
 
@@ -267,14 +318,19 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
         mock_projects = []
         
         def clean_commit_msg(msg):
-            msg_lower = msg.lower()
+            if not msg:
+                return None
+            # Keep only the first line (commit header)
+            first_line = msg.split('\n')[0].strip()
+            msg_lower = first_line.lower()
+            
             # Ignore generic Git boilerplate noise completely
             if any(term in msg_lower for term in ["initial commit", "add files via upload", "update readme", "merge branch", "rename files", "cleanup", "fix typo", "delete", "remove unused", "rename ", "wip", "temp", "todo", "minor"]):
                 return None
             
             # Strip standard prefix tags
             prefixes = ["feat:", "fix:", "refactor:", "chore:", "docs:", "style:", "test:", "feat(api):", "feat(ui):", "fix(api):", "fix(ui):"]
-            cleaned = msg.strip()
+            cleaned = first_line.strip()
             for p in prefixes:
                 if cleaned.lower().startswith(p):
                     cleaned = cleaned[len(p):].strip()
