@@ -90,16 +90,39 @@ class ResumeTailor:
         for r in analysis.get("top_projects", []):
             topics_str = ", ".join(r.get("topics", []))
             commits = r.get("commits", [])
+            readme = r.get("readme", "")
+            repo_langs = r.get("repo_languages", {})
+            file_tree = r.get("file_tree", [])
+            dependencies = r.get("dependencies", [])
             
             repos_str += f"- Repository: {r.get('name')}\n"
             repos_str += f"  - Description: {r.get('description')}\n"
             repos_str += f"  - Stars: {r.get('stars', 0) or r.get('stargazers_count', 0)}\n"
-            repos_str += f"  - Language: {r.get('language') or 'Other'}\n"
+            repos_str += f"  - Primary Language: {r.get('language') or 'Other'}\n"
             repos_str += f"  - Topics: {topics_str}\n"
             
-            # Robust commit and code diff formatting safeguard
+            # Deep code context: language breakdown
+            if repo_langs:
+                lang_details = ", ".join([f"{lang} ({bytes_count} bytes)" for lang, bytes_count in sorted(repo_langs.items(), key=lambda x: x[1], reverse=True)])
+                repos_str += f"  - Language Breakdown (by bytes): {lang_details}\n"
+            
+            # Deep code context: project structure
+            if file_tree:
+                repos_str += f"  - Project File Structure: {', '.join(file_tree)}\n"
+            
+            # Deep code context: actual installed dependencies
+            if dependencies:
+                repos_str += f"  - Installed Dependencies/Libraries: {', '.join(dependencies[:25])}\n"
+            
+            # Deep code context: README (project documentation)
+            if readme:
+                # Clean markdown headers for readability
+                clean_readme = readme.replace('#', '').strip()
+                repos_str += f"  - README Documentation:\n    {clean_readme[:1200]}\n"
+            
+            # Commit evidence (recent code changes)
             if commits:
-                repos_str += "  - Candidate's Real Commits and Code Diffs (Actual lines of code changes):\n"
+                repos_str += "  - Recent Commits and Code Diffs:\n"
                 for idx, c_data in enumerate(commits[:3], 1):
                     if isinstance(c_data, dict):
                         msg = c_data.get("message", "")
@@ -111,8 +134,8 @@ class ResumeTailor:
                                 repos_str += f"        {d}\n"
                     else:
                         repos_str += f"    * Commit {idx}: \"{c_data}\"\n"
-                
-                repos_str += f"  - CRITICAL RULE: Since this project has actual code diffs and commit messages, you MUST write project bullet points that reflect ONLY their actual code modifications and systems design decisions seen in these diffs. Analyze the syntax, libraries, and engineering actions in the diffs to draft highly specific, authentic recruiter bullet points. Do not write generic summaries!\n"
+            
+            repos_str += f"  - CRITICAL RULE: Use ALL the above context (README, dependencies, file structure, language breakdown, AND commits) to write project bullet points that accurately describe what the project does, what technologies it uses, and how the candidate built it. The description should reflect the full scope of the project, not just the last few commits.\n"
             repos_str += "\n"
 
         lang_str = ", ".join([f"{l['name']} ({l['percentage']}%)" for l in analysis.get("languages", [])])
@@ -344,13 +367,33 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
 
         for p in analysis.get("top_projects", [])[:3]:
             techs = p.get("topics", [])
+            deps = p.get("dependencies", [])
+            readme = p.get("readme", "")
+            repo_langs = p.get("repo_languages", {})
+            file_tree = p.get("file_tree", [])
+            
+            # Build tech list from multiple sources: topics, dependencies, repo languages
+            if deps:
+                techs = list(set(techs + deps[:10]))
             if not techs and p.get("language"):
                 techs = [p.get("language")]
+            if repo_langs:
+                for lang in repo_langs.keys():
+                    if lang not in techs:
+                        techs.append(lang)
             if not techs:
                 techs = ["Git", "GitHub"]
 
             p_name = p.get("name", "Project")
             desc = p.get("description", "")
+            
+            # Use README to build a better description if available
+            readme_summary = ""
+            if readme:
+                # Extract first meaningful paragraph from README
+                lines = [l.strip() for l in readme.split('\n') if l.strip() and not l.strip().startswith('#') and not l.strip().startswith('!') and not l.strip().startswith('---')]
+                if lines:
+                    readme_summary = ' '.join(lines[:3])[:200]
 
             # Dynamic rephraser for ALL repositories
             commits = p.get("commits", [])
@@ -381,18 +424,28 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                         verb = action_verbs[i % len(action_verbs)]
                         bullets.append(f"{verb} {msg_body[0].lower() + msg_body[1:]}")
 
-            # Fill remaining bullets from repo description and tech stack
-            tech_str = ', '.join(techs[:3]) if techs else 'standard tooling'
+            # Fill remaining bullets from README, description, dependencies, and file structure
+            tech_str = ', '.join(techs[:5]) if techs else 'standard tooling'
             while len(bullets) < 3:
                 if len(bullets) == 0:
-                    if desc and len(desc) > 10:
+                    if readme_summary:
+                        bullets.append(f"Built {p_name}: {readme_summary}.")
+                    elif desc and len(desc) > 10:
                         bullets.append(f"Developed {p_name}: {desc[:120]}.")
                     else:
                         bullets.append(f"Built and maintained {p_name} using {tech_str}.")
                 elif len(bullets) == 1:
-                    bullets.append(f"Leveraged {tech_str} for core application logic, data handling, and module design.")
+                    if deps:
+                        dep_str = ', '.join(deps[:6])
+                        bullets.append(f"Leveraged {dep_str} for core application logic, data handling, and module design.")
+                    else:
+                        bullets.append(f"Leveraged {tech_str} for core application logic, data handling, and module design.")
                 else:
-                    bullets.append(f"Managed version control workflows with Git, including branching strategies and code reviews.")
+                    if file_tree:
+                        structure_hint = ', '.join([f for f in file_tree if not f.startswith('.')][:5])
+                        bullets.append(f"Architected modular project structure ({structure_hint}) with Git-based version control workflows.")
+                    else:
+                        bullets.append(f"Managed version control workflows with Git, including branching strategies and code reviews.")
 
             mock_projects.append({
                 "name": p_name,

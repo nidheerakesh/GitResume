@@ -87,6 +87,85 @@ class GitHubAnalyzer:
             print(f"Failed to fetch detailed code diffs for {owner}/{repo}: {e}")
         return []
 
+    def fetch_repo_readme(self, owner: str, repo: str) -> str:
+        """
+        Fetches and decodes the README file for a repository.
+        Returns the first ~1500 chars of the README content, or empty string on failure.
+        """
+        try:
+            url = f"https://api.github.com/repos/{owner}/{repo}/readme"
+            res = requests.get(url, headers=self.headers)
+            if res.status_code == 200:
+                import base64
+                data = res.json()
+                content = base64.b64decode(data.get("content", "")).decode("utf-8", errors="ignore")
+                # Truncate to keep prompt budgets sane
+                return content[:1500]
+        except Exception as e:
+            print(f"Failed to fetch README for {owner}/{repo}: {e}")
+        return ""
+
+    def fetch_repo_context(self, owner: str, repo: str) -> dict:
+        """
+        Fetches deep code context for a repository:
+        - Language breakdown (bytes per language)
+        - Root file listing (project structure)
+        - Key dependency files (package.json deps, requirements.txt)
+        """
+        context = {"languages": {}, "file_tree": [], "dependencies": []}
+        
+        try:
+            # 1. Language breakdown (bytes per language)
+            lang_url = f"https://api.github.com/repos/{owner}/{repo}/languages"
+            lang_res = requests.get(lang_url, headers=self.headers)
+            if lang_res.status_code == 200:
+                context["languages"] = lang_res.json()
+            
+            # 2. Root directory listing (project structure)
+            contents_url = f"https://api.github.com/repos/{owner}/{repo}/contents"
+            contents_res = requests.get(contents_url, headers=self.headers)
+            if contents_res.status_code == 200:
+                items = contents_res.json()
+                if isinstance(items, list):
+                    context["file_tree"] = [item.get("name", "") for item in items[:30]]
+                    
+                    # 3. Try to fetch dependency files for tech stack detection
+                    dep_files = {
+                        "package.json": None,
+                        "requirements.txt": None,
+                        "Pipfile": None,
+                        "pyproject.toml": None,
+                    }
+                    for item in items:
+                        fname = item.get("name", "")
+                        if fname in dep_files and item.get("download_url"):
+                            try:
+                                dep_res = requests.get(item["download_url"], timeout=5)
+                                if dep_res.status_code == 200:
+                                    dep_content = dep_res.text[:1000]  # Truncate
+                                    if fname == "package.json":
+                                        import json
+                                        try:
+                                            pkg = json.loads(dep_res.text)
+                                            all_deps = list((pkg.get("dependencies") or {}).keys()) + list((pkg.get("devDependencies") or {}).keys())
+                                            context["dependencies"].extend(all_deps)
+                                        except:
+                                            pass
+                                    elif fname == "requirements.txt":
+                                        lines = dep_content.strip().split("\n")
+                                        for line in lines:
+                                            line = line.strip()
+                                            if line and not line.startswith("#"):
+                                                pkg_name = line.split("==")[0].split(">=")[0].split("<=")[0].split("~=")[0].strip()
+                                                if pkg_name:
+                                                    context["dependencies"].append(pkg_name)
+                            except:
+                                pass
+        except Exception as e:
+            print(f"Failed to fetch repo context for {owner}/{repo}: {e}")
+        
+        return context
+
     def analyze_profile(self, username: str) -> Dict[str, Any]:
         """
         Aggregates and synthesizes languages, repos, stars, and skill lists.
@@ -127,9 +206,13 @@ class GitHubAnalyzer:
         sorted_repos = sorted(repos, key=lambda x: x.get("stargazers_count", 0), reverse=True)
         top_projects = []
         for repo in sorted_repos[:5]: # Take top 5 repos
-            desc = repo.get("description") or "Open source software project built with standard engineering guidelines."
+            desc = repo.get("description") or ""
             owner = repo.get("owner", {}).get("login")
             name = repo.get("name")
+            
+            # Fetch deep code context: README, languages, file tree, dependencies
+            readme_content = self.fetch_repo_readme(owner, name)
+            repo_context = self.fetch_repo_context(owner, name)
             
             # Programmatically query their real commits in this repository
             commits = self.fetch_user_commits(owner, name, username)
@@ -142,7 +225,11 @@ class GitHubAnalyzer:
                 "url": repo.get("html_url"),
                 "language": repo.get("language") or "Other",
                 "topics": repo.get("topics", []),
-                "commits": commits
+                "commits": commits,
+                "readme": readme_content,
+                "repo_languages": repo_context.get("languages", {}),
+                "file_tree": repo_context.get("file_tree", []),
+                "dependencies": repo_context.get("dependencies", [])
             })
 
         # 4. Detected Skills
