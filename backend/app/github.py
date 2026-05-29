@@ -19,6 +19,10 @@ class GitHubAnalyzer:
         profile_res = requests.get(profile_url, headers=self.headers)
         
         if profile_res.status_code != 200:
+            if profile_res.status_code == 403:
+                raise Exception("GitHub API Rate Limit exceeded. Please paste a Personal Access Token (PAT) into the 'GitHub Token' input box on the screen to bypass the rate limit.")
+            elif profile_res.status_code == 404:
+                raise Exception(f"GitHub user '{username}' was not found. Please double check the username.")
             raise Exception(f"Failed to fetch profile for user {username}: {profile_res.text}")
             
         profile = profile_res.json()
@@ -28,7 +32,9 @@ class GitHubAnalyzer:
         repos_res = requests.get(repos_url, headers=self.headers)
         
         if repos_res.status_code != 200:
-            raise Exception(f"Failed to fetch repositories for user {username}")
+            if repos_res.status_code == 403:
+                raise Exception("GitHub API Rate Limit exceeded. Please paste a Personal Access Token (PAT) into the 'GitHub Token' input box on the screen to bypass the rate limit.")
+            raise Exception(f"Failed to fetch repositories for user {username}: {repos_res.text}")
             
         repos = repos_res.json()
         
@@ -39,16 +45,18 @@ class GitHubAnalyzer:
 
     def fetch_user_commits(self, owner: str, repo: str, username: str) -> list:
         """
-        Unrestricted Code Harvester: Fetches up to 10 recent commits by the user, and queries their entire 
-        code patch modifications (git patches/diffs) for absolute high-fidelity semantic analysis.
+        Optimized Code Harvester: Fetches up to 3 commits and fetches diffs for the latest 2 commits 
+        to preserve API rate limits while maintaining rich developer context.
         """
         try:
-            commits_url = f"https://api.github.com/repos/{owner}/{repo}/commits?author={username}&per_page=10"
+            # Query up to 3 recent commits by this author
+            commits_url = f"https://api.github.com/repos/{owner}/{repo}/commits?author={username}&per_page=3"
             res = requests.get(commits_url, headers=self.headers)
             if res.status_code == 200:
                 commits = res.json()
                 contributions = []
-                for c in commits:
+                # Restrict to top 2 commits detail fetches to prevent hitting rate limits
+                for c in commits[:2]:
                     sha = c.get("sha")
                     commit_msg = c.get("commit", {}).get("message", "Contributed code")
                     if not sha:
@@ -62,11 +70,11 @@ class GitHubAnalyzer:
                     if detail_res.status_code == 200:
                         detail_data = detail_res.json()
                         files = detail_data.get("files", [])
-                        for f in files:  # Inspect ALL modified files in this commit
+                        for f in files:  # Inspect modified files
                             filename = f.get("filename")
                             patch = f.get("patch")
                             if filename and patch:
-                                # Keep the complete patch modifications intact without truncation
+                                # Keep patch modifications
                                 clean_patch = patch.replace('\n', '\n        ')
                                 code_changes.append(f"File: {filename}\n        Code Diffs:\n        {clean_patch}")
                     
@@ -89,9 +97,11 @@ class GitHubAnalyzer:
             # Exclude forked repositories right at the entrance!
             repos = [r for r in raw_data["repositories"] if not r.get("fork", False)]
         except Exception as e:
-            # Fallback mock data for testing/demonstration if rate-limited or offline
-            print(f"API Fetch Failed: {e}. Falling back to synthesized mock data for {username}.")
-            return self.get_mock_analysis(username)
+            # Fall back to mock only if username is demo or test, otherwise propagate the error!
+            if username.lower() in ["demo", "test"]:
+                print(f"Using demo mode for {username}")
+                return self.get_mock_analysis(username)
+            raise e
 
         # 1. Total stats
         total_repos = len(repos)

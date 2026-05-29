@@ -194,7 +194,14 @@ function App() {
 
       const res = await fetch(url);
       if (!res.ok) {
-        throw new Error('Failed to fetch profile. Make sure the username is correct.');
+        let errMsg = 'Failed to fetch profile.';
+        try {
+          const errBody = await res.json();
+          if (errBody.detail) {
+            errMsg = errBody.detail;
+          }
+        } catch (e) {}
+        throw new Error(errMsg);
       }
       const githubAnalysis = await res.json();
 
