@@ -227,7 +227,14 @@ function App() {
       });
 
       if (!genRes.ok) {
-        throw new Error('Failed to translate GitHub data into resume structure.');
+        let errMsg = 'Failed to translate GitHub data into resume structure.';
+        try {
+          const errBody = await genRes.json();
+          if (errBody.detail) {
+            errMsg = errBody.detail;
+          }
+        } catch (e) {}
+        throw new Error(errMsg);
       }
 
       const structuralResume = await genRes.json();
