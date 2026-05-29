@@ -41,6 +41,7 @@ interface ProjectItem {
   end_date: string;
   url: string;
   bullets: string[];
+  hidden?: boolean;
 }
 
 interface EducationItem {
