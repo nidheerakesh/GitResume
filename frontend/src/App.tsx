@@ -1675,7 +1675,6 @@ function App() {
           lineHeight: '1.6',
           margin: '0 auto'
         }}>
-          We believe that the best developer tooling is built in public. Whether you want to add new LaTeX templates, refine our Deep Code Intelligence parser, or improve the AI prompting—your contributions are warmly welcome!
         </p>
         <a 
           href="https://github.com/nidheerakesh/GitResume" 
