@@ -120,31 +120,19 @@ class ResumeTailor:
             if readme:
                 # Clean markdown headers for readability
                 clean_readme = readme.replace('#', '').strip()
-                repos_str += f"  - README Documentation:\n    {clean_readme[:1200]}\n"
+                repos_str += f"  - README Documentation:\n    {clean_readme[:400]}\n"
                 
-            # Deep code context: Actual Source Code implementations
-            if source_code:
-                repos_str += "  - Key Source Code Files (Actual Implementation Details):\n"
-                for src in source_code:
-                    repos_str += f"    * File: {src['file']}\n"
-                    repos_str += f"      ```\n{src['code']}\n      ```\n"
-            
-            # Commit evidence (recent code changes)
+            # Commit evidence (recent code changes - only commit messages, no raw diffs to stay under Groq TPM limits)
             if commits:
-                repos_str += "  - Recent Commits and Code Diffs:\n"
-                for idx, c_data in enumerate(commits[:3], 1):
+                repos_str += "  - Recent Commits:\n"
+                for idx, c_data in enumerate(commits[:5], 1):
                     if isinstance(c_data, dict):
                         msg = c_data.get("message", "")
-                        diffs = c_data.get("code_diffs", [])
                         repos_str += f"    * Commit {idx}: \"{msg}\"\n"
-                        if diffs:
-                            repos_str += "      Actual Code Patches:\n"
-                            for d in diffs:
-                                repos_str += f"        {d}\n"
                     else:
                         repos_str += f"    * Commit {idx}: \"{c_data}\"\n"
             
-            repos_str += f"  - CRITICAL RULE: Use ALL the above context (Source Code, README, dependencies, file structure, language breakdown, AND commits) to write project bullet points that accurately describe what the project does, what technologies it uses, and how the candidate built it. Analyze the actual Source Code provided to write highly technical, accurate bullet points that reflect the true system architecture and implementation details! The description should reflect the full scope of the codebase.\n"
+            repos_str += f"  - CRITICAL RULE: Use the above context (README, dependencies, file structure, language breakdown, and commits) to write project bullet points that accurately describe what the project does, what technologies it uses, and how the candidate built it. Write highly technical, accurate bullet points that reflect the true system architecture and implementation details!\n"
             repos_str += "\n"
 
         lang_str = ", ".join([f"{l['name']} ({l['percentage']}%)" for l in analysis.get("languages", [])])
