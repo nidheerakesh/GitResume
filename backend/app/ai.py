@@ -371,10 +371,18 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                     # Validation / Safeguards
                     if "summary" in res_data and "projects" in res_data:
                         return res_data
+                    else:
+                        raise ValueError("AI returned an invalid JSON response structure (missing summary or projects).")
                 else:
-                    print(f"API completion failed with status {res.status_code}: {res.text}")
+                    error_detail = f"AI API completion failed with status {res.status_code}: {res.text}"
+                    print(error_detail)
+                    if self.groq_api_key or self.api_key:
+                        raise ValueError(error_detail)
             except Exception as e:
-                print(f"Master prompt generation failed: {e}. Using smart fallbacks.")
+                error_detail = f"AI Generation Error: {str(e)}"
+                print(error_detail)
+                if self.groq_api_key or self.api_key:
+                    raise ValueError(error_detail)
 
         # Local heuristic fallback matching premium prompt requirements
         mock_projects = []
