@@ -454,12 +454,16 @@ class GitHubAnalyzer:
             if "mirror" in name or "mirror" in description:
                 continue
                 
-            # Exclude trivial configuration, empty, templates, or pure coursework
+            # Exclude trivial configuration, empty, templates, coursework, or collections of notes/loose codes
             exclude_keywords = [
                 "tutorial", "homework", "assignment", "lecture", 
                 "exercises", "practice", "hello-world", "helloworld", 
                 "template", "dotfiles", "configuration", "config", "setup",
-                "sandbox", "boilerplate", "leetcode", "hackerrank", "codewars", "interview-prep"
+                "sandbox", "boilerplate", "leetcode", "hackerrank", "codewars", "interview-prep",
+                "notes", "cheat-sheet", "cheatsheet", "snippets", "examples", "guide",
+                "solutions", "solutions-to", "coding-problems", "dsa-problems", "collection",
+                "handbook", "slides", "syllabus", "materials", "my-notes", "course-notes",
+                "study", "lessons", "documentation-only", "cheat_sheet", "learning", "slides"
             ]
             
             is_course_or_trivial = False
@@ -631,8 +635,16 @@ class GitHubAnalyzer:
                     if any("dockerfile" in f or "docker-compose" in f for f in file_tree):
                         final_score += 10.0
                     # Dependency manifest presence
-                    if any(f in ["package.json", "requirements.txt", "cargo.toml", "go.mod", "gemfile", "pyproject.toml", "poetry.lock"] for f in [os.path.basename(p) for p in file_tree]):
+                    has_manifest = any(f in ["package.json", "requirements.txt", "cargo.toml", "go.mod", "gemfile", "pyproject.toml", "poetry.lock"] for f in [os.path.basename(p) for p in file_tree])
+                    if has_manifest:
                         final_score += 10.0
+                        
+                    # Detect if this is just a collection of loose files/notes and lacks proper engineering structure
+                    has_proper_src = any(any(dir_name in f for dir_name in ["src/", "app/", "lib/", "backend/", "frontend/", "components/"]) for f in file_tree)
+                    if not has_manifest and not has_proper_src:
+                        # A proper project always has either standard dependency sheets or directory organization.
+                        # Folder dumps of notes/codes fail this and get heavily penalized!
+                        final_score -= 45.0
                         
                     candidate_projects.append({
                         "name": repo.get("name"),
@@ -661,6 +673,12 @@ class GitHubAnalyzer:
             while len(selected_projects) < 7 and remaining_projects:
                 # 1. Pop the highest scoring project
                 best_project = remaining_projects[0]
+                
+                # If the project's final score is extremely low (meaning it is a trivial coursework or notes dump),
+                # stop selecting rather than forcing low-quality repositories into the active session!
+                if best_project["score"] < 25.0:
+                    break
+                    
                 selected_projects.append(best_project)
                 
                 # 2. Add its language to selection

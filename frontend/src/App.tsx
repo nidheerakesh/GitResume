@@ -236,6 +236,22 @@ function App() {
   ]);
   const [chatInput, setChatInput] = useState('');
   const [isChatSending, setIsChatSending] = useState(false);
+  
+  // Wipes all active session and resume states clean when switching profiles or logging out
+  const resetSessionState = () => {
+    setLoadedGitHubData(null);
+    setSelectedRepos([]);
+    setRepoSearchQuery('');
+    setRepoLanguageFilter('All');
+    setRepoSortBy('stars');
+    setRepoLimitWarning(false);
+    setLoadedPdfText('');
+    setLoadedPdfFilename('');
+    setLoadedLinkedinText('');
+    setLinkedinUrl('');
+    setResumeData(null);
+    setErrorMsg('');
+  };
 
   // Load saved configurations and versions on mount
   useEffect(() => {
@@ -308,8 +324,8 @@ function App() {
       localStorage.removeItem('gitresume_groq_key');
     }
 
+    resetSessionState();
     setIsConnected(true);
-    setErrorMsg('');
   };
 
   // Option A: Scrape GitHub (Public & Private repos supported)
@@ -744,7 +760,10 @@ function App() {
             <button className="btn btn-accent" onClick={() => setShowVersionsModal(!showVersionsModal)}>
               <History size={16} /> History ({savedVersions.length})
             </button>
-            <button className="btn btn-secondary" onClick={() => setIsConnected(false)}>
+            <button className="btn btn-secondary" onClick={() => {
+              setIsConnected(false);
+              resetSessionState();
+            }}>
               Connect Another Profile
             </button>
           </div>
@@ -838,7 +857,10 @@ function App() {
                   Load an existing resume version or create a new tailored resume.
                 </p>
               </div>
-              <button className="btn btn-secondary" onClick={() => setIsConnected(false)}>
+              <button className="btn btn-secondary" onClick={() => {
+                setIsConnected(false);
+                resetSessionState();
+              }}>
                 Disconnect Profile
               </button>
             </div>
