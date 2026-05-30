@@ -10,7 +10,7 @@ from app.github import GitHubAnalyzer
 from app.resume import generate_resume_latex
 from app.ai import ResumeTailor
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
@@ -49,6 +49,10 @@ class CompileResumeRequest(BaseModel):
 
 class ParseResumeRequest(BaseModel):
     text: str
+    groq_api_key: Optional[str] = None
+
+class LinkedInScrapeRequest(BaseModel):
+    url: str
     groq_api_key: Optional[str] = None
 
 class ChatMessage(BaseModel):
@@ -229,6 +233,83 @@ def parse_existing_resume(req: ParseResumeRequest):
         tailor = ResumeTailor(groq_api_key=req.groq_api_key)
         parsed_data = tailor.parse_resume_text(req.text)
         return parsed_data
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/resume/upload-pdf")
+async def upload_pdf_resume(file: UploadFile = File(...), groq_api_key: str = Form(default="")):
+    """
+    Accepts a PDF resume file, extracts text via pdfplumber, then AI-parses it into structured resume JSON.
+    """
+    try:
+        import pdfplumber
+        import io
+        
+        contents = await file.read()
+        pdf_text = ""
+        with pdfplumber.open(io.BytesIO(contents)) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    pdf_text += page_text + "\n"
+        
+        if not pdf_text.strip():
+            raise HTTPException(status_code=400, detail="Could not extract any text from the uploaded PDF. Please try a different file.")
+        
+        tailor = ResumeTailor(groq_api_key=groq_api_key if groq_api_key else None)
+        parsed_data = tailor.parse_resume_text(pdf_text)
+        return parsed_data
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/resume/linkedin")
+def scrape_linkedin_profile(req: LinkedInScrapeRequest):
+    """
+    Fetches a public LinkedIn profile page and AI-parses the content into structured resume JSON.
+    """
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        
+        url = req.url.strip()
+        if "linkedin.com" not in url:
+            raise HTTPException(status_code=400, detail="Please provide a valid LinkedIn profile URL.")
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        
+        res = requests.get(url, headers=headers, timeout=15)
+        if res.status_code != 200:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Could not access the LinkedIn profile (status {res.status_code}). LinkedIn may be blocking automated access. Try using the PDF upload option instead -- go to your LinkedIn profile, click More > Save to PDF, then upload that file here."
+            )
+        
+        soup = BeautifulSoup(res.text, "html.parser")
+        for tag in soup(["script", "style", "nav", "footer", "header"]):
+            tag.decompose()
+        
+        profile_text = soup.get_text(separator="\n", strip=True)
+        
+        if len(profile_text) < 100:
+            raise HTTPException(
+                status_code=400,
+                detail="LinkedIn returned very limited public data. The profile may be private or require login. Try the PDF upload option instead -- go to your LinkedIn profile, click More > Save to PDF."
+            )
+        
+        tailor = ResumeTailor(groq_api_key=req.groq_api_key)
+        parsed_data = tailor.parse_resume_text(profile_text[:8000])
+        return parsed_data
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         traceback.print_exc()

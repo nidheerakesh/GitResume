@@ -14,7 +14,9 @@ import {
   FolderGit2,
   GraduationCap,
   Award,
-  UserCheck
+  UserCheck,
+  Upload,
+  Linkedin
 } from 'lucide-react';
 import './App.css';
 
@@ -215,6 +217,9 @@ function App() {
   // Resume Raw Text Import States
   const [importText, setImportText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [isLinkedinScraping, setIsLinkedinScraping] = useState(false);
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
 
   // AI Chat Assistant States
   const [showChatbot, setShowChatbot] = useState(false);
@@ -379,6 +384,77 @@ function App() {
       setErrorMsg(err.message || 'An error occurred while parsing your resume.');
     } finally {
       setIsImporting(false);
+    }
+  };
+
+  // Upload PDF Resume & AI Parse
+  const handleUploadPdf = async (file: File) => {
+    setIsUploadingPdf(true);
+    setErrorMsg('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('groq_api_key', groqKey.trim());
+
+      const res = await fetch(`${API_BASE_URL}/resume/upload-pdf`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) {
+        let errMsg = 'Failed to parse PDF resume.';
+        try {
+          const errBody = await res.json();
+          if (errBody.detail) errMsg = errBody.detail;
+        } catch (e) {}
+        throw new Error(errMsg);
+      }
+
+      const parsedResume = await res.json();
+      setResumeData(parsedResume);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || 'An error occurred while parsing your PDF.');
+    } finally {
+      setIsUploadingPdf(false);
+    }
+  };
+
+  // Scrape LinkedIn Profile URL
+  const handleLinkedinScrape = async () => {
+    if (!linkedinUrl.trim()) {
+      setErrorMsg('Please enter a LinkedIn profile URL.');
+      return;
+    }
+    setIsLinkedinScraping(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/resume/linkedin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: linkedinUrl.trim(),
+          groq_api_key: groqKey.trim() || undefined
+        })
+      });
+
+      if (!res.ok) {
+        let errMsg = 'Failed to scrape LinkedIn profile.';
+        try {
+          const errBody = await res.json();
+          if (errBody.detail) errMsg = errBody.detail;
+        } catch (e) {}
+        throw new Error(errMsg);
+      }
+
+      const parsedResume = await res.json();
+      setResumeData(parsedResume);
+      setLinkedinUrl('');
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || 'An error occurred while scraping LinkedIn.');
+    } finally {
+      setIsLinkedinScraping(false);
     }
   };
 
@@ -783,57 +859,98 @@ function App() {
               )}
             </div>
 
-            {/* CREATE NEW RESUME SIDE-BY-SIDE OPTIONS */}
+            {/* CREATE NEW RESUME - THREE VERTICAL OPTIONS */}
             <div>
               <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', marginBottom: '1rem', fontWeight: '700' }}>
                 Create a New Resume
               </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 
-                {/* OPTION A: SCRAPE GITHUB */}
-                <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'space-between' }}>
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)' }}>Option A: Generate from GitHub</h4>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5', marginTop: '0.5rem' }}>
-                      Automatically scan your repositories, calculate coding language percentages, and extract key features from README files.
-                    </p>
-                    <div style={{ background: 'rgba(16, 185, 129, 0.05)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.1)', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', marginTop: '0.75rem', lineHeight: '1.4' }}>
-                      💡 <strong>Private Repos:</strong> Since you are logged in, if you provided a PAT, private repositories will also be scanned!
-                    </div>
+                {/* 1. GENERATE FROM GITHUB */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                  <div style={{ background: 'rgba(59, 130, 246, 0.1)', borderRadius: 'var(--radius-md)', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <FolderGit2 size={28} style={{ color: 'var(--primary)' }} />
                   </div>
-                  <button className="btn btn-primary" style={{ width: '100%', padding: '0.75rem' }} onClick={handleScrapeGitHub} disabled={isLoading}>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)' }}>Generate from GitHub</h4>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.45', marginTop: '0.25rem', marginBottom: 0 }}>
+                      Automatically scan your repositories, detect languages, frameworks, and extract project details. {token.trim() ? 'Private repos will be included.' : 'Add a PAT on the login page to include private repos.'}
+                    </p>
+                  </div>
+                  <button className="btn btn-primary" style={{ flexShrink: 0, padding: '0.65rem 1.5rem' }} onClick={handleScrapeGitHub} disabled={isLoading}>
                     {isLoading ? (
                       <>
-                        <RefreshCw className="animate-spin" size={16} /> Scanning Repositories...
+                        <RefreshCw className="animate-spin" size={14} /> Scanning...
                       </>
                     ) : (
-                      "Scrape & Build from GitHub"
+                      "Generate"
                     )}
                   </button>
                 </div>
 
-                {/* OPTION B: IMPORT RESUME OR LINKEDIN PROFILE */}
-                <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)' }}>Option B: Import Resume or LinkedIn</h4>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5', marginTop: '0.5rem' }}>
-                      Paste your existing resume plain text, or press <code>Ctrl+A</code> and copy your LinkedIn profile page text below. Our AI extracts your full professional profile instantly!
+                {/* 2. UPLOAD RESUME AS PDF */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                  <div style={{ background: 'rgba(168, 85, 247, 0.1)', borderRadius: 'var(--radius-md)', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Upload size={28} style={{ color: '#a855f7' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)' }}>Upload Resume as PDF</h4>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.45', marginTop: '0.25rem', marginBottom: 0 }}>
+                      Upload your existing resume PDF. AI will extract all details -- name, skills, experience, education, and projects -- into an editable format.
                     </p>
                   </div>
-                  <textarea
-                    placeholder="Paste raw resume or copied LinkedIn profile text here..."
-                    className="form-control"
-                    value={importText}
-                    onChange={(e) => setImportText(e.target.value)}
-                    style={{ height: '100px', fontSize: '0.8rem', resize: 'none', background: 'rgba(0,0,0,0.2)' }}
-                  />
-                  <button className="btn btn-accent" style={{ width: '100%', padding: '0.75rem' }} onClick={handleImportResume} disabled={isImporting || !importText.trim()}>
-                    {isImporting ? (
+                  <label style={{ flexShrink: 0 }}>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadPdf(file);
+                        e.target.value = '';
+                      }}
+                    />
+                    <span className="btn btn-accent" style={{ padding: '0.65rem 1.5rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', opacity: isUploadingPdf ? 0.6 : 1 }}>
+                      {isUploadingPdf ? (
+                        <>
+                          <RefreshCw className="animate-spin" size={14} /> Parsing...
+                        </>
+                      ) : (
+                        "Choose PDF"
+                      )}
+                    </span>
+                  </label>
+                </div>
+
+                {/* 3. LINKEDIN PROFILE LINK */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                  <div style={{ background: 'rgba(14, 118, 168, 0.1)', borderRadius: 'var(--radius-md)', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Linkedin size={28} style={{ color: '#0e76a8' }} />
+                  </div>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)' }}>LinkedIn Profile Link</h4>
+                    <input
+                      type="url"
+                      className="form-control"
+                      placeholder="https://www.linkedin.com/in/your-profile"
+                      value={linkedinUrl}
+                      onChange={(e) => setLinkedinUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleLinkedinScrape();
+                        }
+                      }}
+                      style={{ fontSize: '0.8rem', padding: '0.5rem 0.75rem', background: 'rgba(0,0,0,0.2)' }}
+                    />
+                  </div>
+                  <button className="btn btn-secondary" style={{ flexShrink: 0, padding: '0.65rem 1.5rem', borderColor: '#0e76a8', color: '#0e76a8' }} onClick={handleLinkedinScrape} disabled={isLinkedinScraping || !linkedinUrl.trim()}>
+                    {isLinkedinScraping ? (
                       <>
-                        <RefreshCw className="animate-spin" size={16} /> Parsing Text with Llama-3...
+                        <RefreshCw className="animate-spin" size={14} /> Scraping...
                       </>
                     ) : (
-                      "AI Parse & Load Profile"
+                      "Import"
                     )}
                   </button>
                 </div>
