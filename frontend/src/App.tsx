@@ -15,8 +15,7 @@ import {
   GraduationCap,
   Award,
   UserCheck,
-  Upload,
-  Linkedin
+  Upload
 } from 'lucide-react';
 import './App.css';
 
@@ -214,9 +213,7 @@ function App() {
   const [showVersionsModal, setShowVersionsModal] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Resume Raw Text Import States
-  const [importText, setImportText] = useState('');
-  const [isImporting, setIsImporting] = useState(false);
+  // Resume Import States
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [isLinkedinScraping, setIsLinkedinScraping] = useState(false);
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
@@ -346,44 +343,6 @@ function App() {
       setErrorMsg(err.message || 'An error occurred during profiling.');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Option B: AI Parse & Import from Raw Resume Text / LinkedIn Profile
-  const handleImportResume = async () => {
-    if (!importText.trim()) {
-      setErrorMsg('Please paste your existing resume or LinkedIn profile text.');
-      return;
-    }
-    setIsImporting(true);
-    setErrorMsg('');
-    try {
-      const res = await fetch(`${API_BASE_URL}/resume/parse`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: importText,
-          groq_api_key: groqKey.trim() || undefined
-        })
-      });
-
-      if (!res.ok) {
-        let errMsg = 'Failed to parse resume text.';
-        try {
-          const errBody = await res.json();
-          if (errBody.detail) errMsg = errBody.detail;
-        } catch (e) {}
-        throw new Error(errMsg);
-      }
-
-      const parsedResume = await res.json();
-      setResumeData(parsedResume);
-      setImportText('');
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || 'An error occurred while parsing your resume.');
-    } finally {
-      setIsImporting(false);
     }
   };
 
@@ -925,7 +884,7 @@ function App() {
                 {/* 3. LINKEDIN PROFILE LINK */}
                 <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                   <div style={{ background: 'rgba(14, 118, 168, 0.1)', borderRadius: 'var(--radius-md)', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Linkedin size={28} style={{ color: '#0e76a8' }} />
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="#0e76a8" xmlns="http://www.w3.org/2000/svg"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
                   </div>
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)' }}>LinkedIn Profile Link</h4>
