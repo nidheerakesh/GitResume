@@ -8,6 +8,26 @@ class GitHubAnalyzer:
         if token:
             self.headers["Authorization"] = f"token {token}"
         self.headers["Accept"] = "application/vnd.github.v3+json"
+        self._rate_limit_remaining = None
+        
+    def _check_rate_limit(self, response: requests.Response):
+        """Track GitHub API rate limit from response headers."""
+        remaining = response.headers.get("X-RateLimit-Remaining")
+        if remaining is not None:
+            self._rate_limit_remaining = int(remaining)
+    
+    def _has_rate_budget(self, needed: int = 1) -> bool:
+        """Check if we have enough rate limit budget for additional API calls."""
+        if self._rate_limit_remaining is None:
+            return True  # Unknown, assume OK
+        return self._rate_limit_remaining > needed
+        
+    def _safe_get(self, url: str, timeout: int = 10) -> requests.Response:
+        """Make a GET request and track rate limits."""
+        res = requests.get(url, headers=self.headers, timeout=timeout)
+        self._check_rate_limit(res)
+        return res
+
         
     def fetch_user_data(self, username: str) -> Dict[str, Any]:
         """
@@ -16,11 +36,26 @@ class GitHubAnalyzer:
         """
         # Fetch profile
         profile_url = f"https://api.github.com/users/{username}"
-        profile_res = requests.get(profile_url, headers=self.headers)
+        profile_res = self._safe_get(profile_url)
         
         if profile_res.status_code != 200:
             if profile_res.status_code == 403:
-                raise Exception("GitHub API Rate Limit exceeded. Please paste a Personal Access Token (PAT) into the 'GitHub Token' input box on the screen to bypass the rate limit.")
+                remaining = profile_res.headers.get("X-RateLimit-Remaining", "0")
+                reset_ts = profile_res.headers.get("X-RateLimit-Reset", "")
+                import time
+                reset_msg = ""
+                if reset_ts:
+                    try:
+                        reset_in = int(reset_ts) - int(time.time())
+                        if reset_in > 0:
+                            reset_msg = f" Rate limit resets in {reset_in // 60} minutes."
+                    except:
+                        pass
+                raise Exception(
+                    f"GitHub API rate limit exceeded (remaining: {remaining}).{reset_msg} "
+                    f"To fix this, paste a free GitHub Personal Access Token (PAT) on the login screen. "
+                    f"You can create one at https://github.com/settings/tokens with no special scopes needed."
+                )
             elif profile_res.status_code == 404:
                 raise Exception(f"GitHub user '{username}' was not found. Please double check the username.")
             raise Exception(f"Failed to fetch profile for user {username}: {profile_res.text}")
@@ -29,11 +64,16 @@ class GitHubAnalyzer:
         
         # Fetch repos (up to 100 public repos)
         repos_url = f"https://api.github.com/users/{username}/repos?per_page=100&type=owner"
-        repos_res = requests.get(repos_url, headers=self.headers)
+        repos_res = self._safe_get(repos_url)
         
         if repos_res.status_code != 200:
             if repos_res.status_code == 403:
-                raise Exception("GitHub API Rate Limit exceeded. Please paste a Personal Access Token (PAT) into the 'GitHub Token' input box on the screen to bypass the rate limit.")
+                # We got the profile but hit rate limit on repos — return partial data
+                print(f"Rate limit hit fetching repos for {username}, returning profile-only data")
+                return {
+                    "profile": profile,
+                    "repositories": []
+                }
             raise Exception(f"Failed to fetch repositories for user {username}: {repos_res.text}")
             
         repos = repos_res.json()
@@ -47,11 +87,17 @@ class GitHubAnalyzer:
         """
         Optimized Code Harvester: Fetches up to 3 commits and fetches diffs for the latest 2 commits 
         to preserve API rate limits while maintaining rich developer context.
+        Gracefully skips if rate limit budget is exhausted.
         """
+        # Skip if rate limit budget is too low (need ~3 calls per repo for commits)
+        if not self._has_rate_budget(3):
+            print(f"Skipping commit fetch for {owner}/{repo} — rate limit budget low ({self._rate_limit_remaining} remaining)")
+            return [{"message": "Contributed code to this repository", "code_diffs": []}]
+            
         try:
             # Query up to 3 recent commits by this author
             commits_url = f"https://api.github.com/repos/{owner}/{repo}/commits?author={username}&per_page=3"
-            res = requests.get(commits_url, headers=self.headers)
+            res = self._safe_get(commits_url)
             if res.status_code == 200:
                 commits = res.json()
                 contributions = []
@@ -61,40 +107,49 @@ class GitHubAnalyzer:
                     commit_msg = c.get("commit", {}).get("message", "Contributed code")
                     if not sha:
                         continue
-                        
-                    # Fetch direct files changed and their code patches (diffs)
-                    detail_url = f"https://api.github.com/repos/{owner}/{repo}/commits/{sha}"
-                    detail_res = requests.get(detail_url, headers=self.headers)
                     
+                    # Only fetch diffs if we have rate budget
                     code_changes = []
-                    if detail_res.status_code == 200:
-                        detail_data = detail_res.json()
-                        files = detail_data.get("files", [])
-                        for f in files:  # Inspect modified files
-                            filename = f.get("filename")
-                            patch = f.get("patch")
-                            if filename and patch:
-                                # Keep patch modifications
-                                clean_patch = patch.replace('\n', '\n        ')
-                                code_changes.append(f"File: {filename}\n        Code Diffs:\n        {clean_patch}")
+                    if self._has_rate_budget(2):
+                        # Fetch direct files changed and their code patches (diffs)
+                        detail_url = f"https://api.github.com/repos/{owner}/{repo}/commits/{sha}"
+                        detail_res = self._safe_get(detail_url)
+                        
+                        if detail_res.status_code == 200:
+                            detail_data = detail_res.json()
+                            files = detail_data.get("files", [])
+                            for f in files:  # Inspect modified files
+                                filename = f.get("filename")
+                                patch = f.get("patch")
+                                if filename and patch:
+                                    # Keep patch modifications
+                                    clean_patch = patch.replace('\n', '\n        ')
+                                    code_changes.append(f"File: {filename}\n        Code Diffs:\n        {clean_patch}")
                     
                     contributions.append({
                         "message": commit_msg.strip(),
                         "code_diffs": code_changes
                     })
-                return contributions
+                return contributions if contributions else [{"message": "Contributed code to this repository", "code_diffs": []}]
+            elif res.status_code == 403:
+                # Rate limited — return a placeholder commit so the repo isn't skipped entirely
+                return [{"message": "Contributed code to this repository", "code_diffs": []}]
         except Exception as e:
             print(f"Failed to fetch detailed code diffs for {owner}/{repo}: {e}")
         return []
+
 
     def fetch_repo_readme(self, owner: str, repo: str) -> str:
         """
         Fetches and decodes the README file for a repository.
         Returns the first ~1500 chars of the README content, or empty string on failure.
+        Skips if rate limit budget is exhausted.
         """
+        if not self._has_rate_budget(2):
+            return ""
         try:
             url = f"https://api.github.com/repos/{owner}/{repo}/readme"
-            res = requests.get(url, headers=self.headers)
+            res = self._safe_get(url)
             if res.status_code == 200:
                 import base64
                 data = res.json()
@@ -115,16 +170,21 @@ class GitHubAnalyzer:
         """
         context = {"languages": {}, "file_tree": [], "dependencies": [], "source_code": []}
         
+        # Skip deep context fetch if rate limit is too low
+        if not self._has_rate_budget(5):
+            print(f"Skipping deep context fetch for {owner}/{repo} — rate limit budget low")
+            return context
+            
         try:
             # 1. Language breakdown (bytes per language)
             lang_url = f"https://api.github.com/repos/{owner}/{repo}/languages"
-            lang_res = requests.get(lang_url, headers=self.headers)
+            lang_res = self._safe_get(lang_url)
             if lang_res.status_code == 200:
                 context["languages"] = lang_res.json()
             
             # 2. Recursive tree listing (project structure & source files)
             tree_url = f"https://api.github.com/repos/{owner}/{repo}/git/trees/{default_branch}?recursive=1"
-            tree_res = requests.get(tree_url, headers=self.headers)
+            tree_res = self._safe_get(tree_url)
             if tree_res.status_code == 200:
                 items = tree_res.json().get("tree", [])
                 
@@ -254,6 +314,7 @@ class GitHubAnalyzer:
             desc = repo.get("description") or ""
             
             # Fetch deep code context: README, languages, file tree, dependencies, source code
+            # Skip deep analysis if rate budget is running low
             default_branch = repo.get("default_branch", "main")
             readme_content = self.fetch_repo_readme(owner, name)
             repo_context = self.fetch_repo_context(owner, name, default_branch)

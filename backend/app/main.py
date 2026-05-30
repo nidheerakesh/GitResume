@@ -70,6 +70,9 @@ class SynthesizeResumeRequest(BaseModel):
     linkedin_text: Optional[str] = ""
     groq_api_key: Optional[str] = None
 
+class GitHubProfileRequest(BaseModel):
+    token: Optional[str] = None
+
 @app.get("/api/health")
 def health_check():
     return {"status": "healthy", "service": "GitResume API"}
@@ -78,12 +81,29 @@ def health_check():
 def get_github_profile(username: str, token: Optional[str] = None):
     """
     Fetches the public profile, top repos, languages, and skills of a GitHub user.
+    (Legacy GET endpoint — token via query param, kept for backward compatibility.)
     """
     if not username or username.strip() == "":
         raise HTTPException(status_code=400, detail="Username is required")
         
     try:
         analyzer = GitHubAnalyzer(token=token)
+        analysis = analyzer.analyze_profile(username)
+        return analysis
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/github/profile/{username}")
+def post_github_profile(username: str, req: GitHubProfileRequest):
+    """
+    Fetches the public profile, top repos, languages, and skills of a GitHub user.
+    Token is accepted securely in the request body instead of as a query parameter.
+    """
+    if not username or username.strip() == "":
+        raise HTTPException(status_code=400, detail="Username is required")
+        
+    try:
+        analyzer = GitHubAnalyzer(token=req.token)
         analysis = analyzer.analyze_profile(username)
         return analysis
     except Exception as e:

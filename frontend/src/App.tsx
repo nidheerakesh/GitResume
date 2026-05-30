@@ -301,12 +301,13 @@ function App() {
     setIsLoading(true);
     setErrorMsg('');
     try {
-      let url = `${API_BASE_URL}/github/profile/${username.trim()}`;
-      if (token.trim()) {
-        url += `?token=${encodeURIComponent(token.trim())}`;
-      }
-
-      const res = await fetch(url);
+      const res = await fetch(`${API_BASE_URL}/github/profile/${username.trim()}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: token.trim() || undefined
+        })
+      });
       if (!res.ok) {
         let errMsg = 'Failed to fetch profile.';
         try {
@@ -697,7 +698,20 @@ function App() {
       {/* Dynamic Navbar */}
       <header className="navbar">
         <div className="logo-container">
-          <div className="logo-badge">GR</div>
+          <div className="logo-badge" style={{ padding: 0, background: 'transparent', boxShadow: 'none', display: 'flex', alignItems: 'center' }}>
+            <svg width="38" height="38" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+              <rect width="48" height="48" rx="10" fill="#1a2233"/>
+              <g transform="translate(6, 7) scale(0.75)">
+                <path d="M30 8 C30 8 32 6 34 8 C36 10 34 12 32 12 L22 12 C14 12 8 18 8 26 L8 28 C8 28 6 30 8 32 C10 34 12 32 12 30 L12 26 C12 20 16 16 22 16 L28 16" stroke="#3B8DD6" strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 30 L12 34 C12 38 16 42 22 42 L28 42" stroke="#3B8DD6" strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M28 16 L28 42" stroke="#1E6AAF" strokeWidth="4.5" fill="none" strokeLinecap="round"/>
+                <path d="M28 16 L34 16 C40 16 40 24 34 24 L28 24" stroke="#1E6AAF" strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M32 24 L40 42" stroke="#1E6AAF" strokeWidth="4.5" fill="none" strokeLinecap="round"/>
+                <circle cx="34" cy="8" r="3.5" fill="#3B8DD6"/>
+                <circle cx="10" cy="30" r="3.5" fill="#3B8DD6"/>
+              </g>
+            </svg>
+          </div>
           <span className="logo-text">GitResume</span>
         </div>
         {isConnected && (
@@ -888,24 +902,85 @@ function App() {
                       <button 
                         className="btn btn-secondary btn-sm" 
                         style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', borderColor: 'rgba(255,255,255,0.1)' }}
-                        onClick={() => {
-                          // Allow loading directly
-                           const simulatedResume = {
-                            name: loadedGitHubData.name || '',
-                            email: loadedGitHubData.email || '',
-                            phone: '',
-                            linkedin: '',
-                            github: loadedGitHubData.username || '',
-                            bio: loadedGitHubData.bio || '',
-                            skills: loadedGitHubData.detected_skills || { languages: [], frameworks: [], tools: [] },
-                            top_projects: loadedGitHubData.top_projects || [],
-                            experience: [],
-                            education: [],
-                            achievements: [],
-                            coursework: { cs: '', math: '' },
-                            positions: []
-                          };
-                          setResumeData(simulatedResume as any);
+                        onClick={async () => {
+                          // Generate a full resume from GitHub data via the AI backend
+                          setIsLoading(true);
+                          setErrorMsg('');
+                          try {
+                            const skills = loadedGitHubData.detected_skills || { languages: [], frameworks: [], tools: [] };
+                            const res = await fetch(`${API_BASE_URL}/resume/generate`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                name: loadedGitHubData.name || loadedGitHubData.username || '',
+                                email: loadedGitHubData.email || '',
+                                phone: '',
+                                linkedin: '',
+                                github: loadedGitHubData.username || '',
+                                bio: loadedGitHubData.bio || '',
+                                skills: skills,
+                                top_projects: loadedGitHubData.top_projects || [],
+                                groq_api_key: groqKey.trim() || undefined
+                              })
+                            });
+
+                            if (res.ok) {
+                              const generatedResume = await res.json();
+                              setResumeData(generatedResume);
+                            } else {
+                              // Fallback: manually convert GitHub data into resume format locally
+                              const topProjects = (loadedGitHubData.top_projects || []).slice(0, 5);
+                              const convertedProjects = topProjects.map((p: any) => ({
+                                name: p.name || 'Project',
+                                tech: [p.language, ...(p.topics || [])].filter(Boolean).slice(0, 5),
+                                start_date: '',
+                                end_date: 'Present',
+                                url: p.url || '',
+                                bullets: (p.commits || []).slice(0, 3).map((c: any) =>
+                                  typeof c === 'string' ? c : (c.message || 'Contributed to this project')
+                                ).filter(Boolean),
+                                hidden: false
+                              }));
+
+                              // Ensure each project has at least one bullet
+                              convertedProjects.forEach((p: any) => {
+                                if (p.bullets.length === 0) {
+                                  p.bullets = [topProjects.find((tp: any) => tp.name === p.name)?.description || 'Developed and maintained this project.'];
+                                }
+                              });
+
+                              const langStr = (skills.languages || []).slice(0, 3).join(', ');
+                              const projNames = convertedProjects.slice(0, 2).map((p: any) => p.name).join(' and ');
+
+                              setResumeData({
+                                name: loadedGitHubData.name || '',
+                                email: loadedGitHubData.email || '',
+                                phone: '',
+                                linkedin: '',
+                                github: loadedGitHubData.username ? `https://github.com/${loadedGitHubData.username}` : '',
+                                course: '',
+                                roll: '',
+                                website: '',
+                                summary: `Software developer with hands-on experience in ${langStr || 'multiple technologies'}. Active open-source contributor maintaining ${loadedGitHubData.public_repos || 0} repositories on GitHub${projNames ? `, including ${projNames}` : ''}.`,
+                                skills: skills,
+                                projects: convertedProjects,
+                                experience: [],
+                                education: [],
+                                achievements: loadedGitHubData.public_repos > 0 ? [{
+                                  title: 'Open Source Contributor',
+                                  description: `Maintained ${loadedGitHubData.public_repos} public repositories on GitHub with ${loadedGitHubData.total_stars || 0} stars`,
+                                  year: new Date().getFullYear().toString()
+                                }] : [],
+                                coursework: { cs: '', math: '' },
+                                positions: []
+                              } as any);
+                            }
+                          } catch (err: any) {
+                            console.error(err);
+                            setErrorMsg(err.message || 'Failed to generate resume from GitHub data.');
+                          } finally {
+                            setIsLoading(false);
+                          }
                         }}
                       >
                         Use this source alone
