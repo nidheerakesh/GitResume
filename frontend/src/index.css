@@ -611,9 +611,12 @@ textarea.form-control {
     font-size: 11pt !important;
   }
   
-  /* Standard A4 Page Setup with precise margins */
   @page {
     size: A4;
     margin: 0.8cm 0.85cm 0.2cm 0.85cm !important;
+  }
+  
+  .no-print {
+    display: none !important;
   }
 }

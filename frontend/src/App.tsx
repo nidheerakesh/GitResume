@@ -212,6 +212,14 @@ function App() {
   const [showVersionsModal, setShowVersionsModal] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // AI Chat Assistant States
+  const [showChatbot, setShowChatbot] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
+    { role: 'assistant', content: 'Hi there! I am your GitResume AI career coach. Ask me anything about your resume, skills, or projects—such as "Why did you put Jinja2 in my skills?"' }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatSending, setIsChatSending] = useState(false);
+
   // Load saved configurations and versions on mount
   useEffect(() => {
     const savedToken = localStorage.getItem('gitresume_github_token');
@@ -455,6 +463,42 @@ function App() {
     setShowTailorReviewModal(false);
     setTailorDiffs([]);
     alert(`Successfully applied ${appliedCount} keyword-optimized enhancements to your resume!`);
+  };
+
+  // AI Chatbot Assistant handler
+  const handleSendChatMessage = async () => {
+    if (!chatInput.trim() || !resumeData || isChatSending) return;
+    
+    const userMsg = chatInput.trim();
+    setChatInput('');
+    setChatMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setIsChatSending(true);
+    
+    try {
+      const activeMessages = [...chatMessages.slice(-8), { role: 'user' as const, content: userMsg }];
+      const res = await fetch(`${API_BASE_URL}/resume/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resume_data: resumeData,
+          messages: activeMessages,
+          groq_api_key: groqKey.trim() || undefined
+        })
+      });
+      
+      if (res.ok) {
+        const payload = await res.json();
+        setChatMessages(prev => [...prev, { role: 'assistant', content: payload.response }]);
+      } else {
+        const errData = await res.json();
+        setChatMessages(prev => [...prev, { role: 'assistant', content: `Error: ${errData.detail || 'Could not reach career coach chatbot.'}` }]);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setChatMessages(prev => [...prev, { role: 'assistant', content: `Network error: ${err.message || 'Please check your API backend connection.'}` }]);
+    } finally {
+      setIsChatSending(false);
+    }
   };
 
   // Save named resume version
@@ -1910,6 +1954,200 @@ function App() {
             </div>
             
           </div>
+      )}
+
+      {/* FLOATING AI CAREER COACH CHATBOT */}
+      {isConnected && resumeData && (
+        <div 
+          className="no-print"
+          style={{ 
+            position: 'fixed', 
+            bottom: '2rem', 
+            right: '2rem', 
+            zIndex: 999,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: '1rem',
+            fontFamily: 'Inter, sans-serif'
+          }}
+        >
+          {/* Chat Window Panel */}
+          {showChatbot && (
+            <div style={{
+              width: '360px',
+              height: '500px',
+              background: 'rgba(15, 23, 42, 0.9)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid var(--border-light)',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: 'var(--shadow-lg)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}>
+              {/* Header */}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                borderBottom: '1px solid var(--border-light)',
+                padding: '1rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>AI Resume Assistant</span>
+                  <span style={{ fontSize: '0.7rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%', display: 'inline-block' }}></span>
+                    Online Career Coach
+                  </span>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setShowChatbot(false)} 
+                  style={{ 
+                    background: 'transparent', 
+                    border: 'none', 
+                    color: 'var(--text-muted)', 
+                    cursor: 'pointer', 
+                    fontSize: '1.25rem',
+                    padding: '0.25rem'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Message List */}
+              <div style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.85rem'
+              }}>
+                {chatMessages.map((msg, index) => (
+                  <div 
+                    key={index}
+                    style={{
+                      alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                      maxWidth: '85%',
+                      background: msg.role === 'user' ? 'var(--primary)' : 'rgba(255, 255, 255, 0.04)',
+                      color: msg.role === 'user' ? '#ffffff' : 'var(--text-primary)',
+                      padding: '0.75rem 1rem',
+                      borderRadius: msg.role === 'user' ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
+                      fontSize: '0.85rem',
+                      lineHeight: '1.45',
+                      border: msg.role === 'user' ? 'none' : '1px solid var(--border-light)'
+                    }}
+                  >
+                    {msg.content}
+                  </div>
+                ))}
+                {isChatSending && (
+                  <div style={{
+                    alignSelf: 'flex-start',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    color: 'var(--text-muted)',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '14px 14px 14px 2px',
+                    fontSize: '0.85rem',
+                    border: '1px solid var(--border-light)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
+                  }}>
+                    <span>Thinking...</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Input Bar */}
+              <div style={{
+                padding: '0.85rem 1rem',
+                borderTop: '1px solid var(--border-light)',
+                background: 'rgba(0, 0, 0, 0.1)',
+                display: 'flex',
+                gap: '0.5rem'
+              }}>
+                <input 
+                  type="text"
+                  placeholder="Ask why a skill was added..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSendChatMessage();
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '0.5rem 0.75rem',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.85rem',
+                    outline: 'none'
+                  }}
+                />
+                <button 
+                  type="button"
+                  onClick={handleSendChatMessage}
+                  disabled={!chatInput.trim() || isChatSending}
+                  style={{
+                    background: 'var(--primary)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '0 1rem',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    fontWeight: 'bold',
+                    opacity: (!chatInput.trim() || isChatSending) ? 0.5 : 1
+                  }}
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Toggle Trigger Capsule */}
+          <button 
+            type="button"
+            onClick={() => setShowChatbot(!showChatbot)}
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: 'var(--primary)',
+              color: '#ffffff',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: 'var(--shadow-md)',
+              transition: 'transform 0.2s ease, background 0.2s ease',
+              outline: 'none'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            {showChatbot ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            )}
+          </button>
         </div>
       )}
     </div>

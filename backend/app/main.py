@@ -47,6 +47,15 @@ class TailorResumeRequest(BaseModel):
 class CompileResumeRequest(BaseModel):
     resume_data: Dict[str, Any]
 
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatResumeRequest(BaseModel):
+    resume_data: Dict[str, Any]
+    messages: List[ChatMessage]
+    groq_api_key: Optional[str] = None
+
 @app.get("/api/health")
 def health_check():
     return {"status": "healthy", "service": "GitResume API"}
@@ -163,4 +172,46 @@ def compile_resume(req: CompileResumeRequest):
             "filename": f"resume_{req.resume_data.get('name', 'candidate').lower().replace(' ', '_')}.tex"
         }
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/resume/chat")
+def chat_resume(req: ChatResumeRequest):
+    """
+    Answers user questions contextually based on their current resume state.
+    """
+    try:
+        tailor = ResumeTailor(groq_api_key=req.groq_api_key)
+        
+        # Build prompt context with resume JSON
+        import json
+        system_prompt = f"""
+        You are a highly professional, helpful, and precise Career Coach and ATS expert AI assistant inside the GitResume application.
+        The candidate is currently building and optimizing their resume. Here is their current resume JSON data:
+        {json.dumps(req.resume_data, indent=2)}
+
+        Answer the user's questions about their resume (such as "Why did you put Jinja2 in my skills?", "How can I improve my project description?", etc.) accurately and concisely based on their resume data, their GitHub history, and general ATS matching best practices.
+        Keep your answers strictly professional, friendly, and structured. Do not use any emojis in your response.
+        """
+        
+        # Build payload messages
+        payload_messages = [{"role": "system", "content": system_prompt}]
+        for m in req.messages:
+            payload_messages.append({"role": m.role, "content": m.content})
+            
+        payload = {
+            "model": tailor.model,
+            "messages": payload_messages,
+            "temperature": 0.5
+        }
+        
+        import requests
+        res = requests.post(tailor.url, headers=tailor.headers, json=payload, timeout=30)
+        if res.status_code == 200:
+            content = res.json()["choices"][0]["message"]["content"]
+            return {"response": content}
+        else:
+            raise HTTPException(status_code=res.status_code, detail=f"Groq API call failed: {res.text}")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
