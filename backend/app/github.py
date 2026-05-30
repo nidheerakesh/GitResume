@@ -435,19 +435,131 @@ class GitHubAnalyzer:
         # Explicitly filter repos to only keep non-forks (personal/source repositories)
         personal_repos = [r for r in repos if not r.get("fork", False) and not r.get("is_fork", False)]
         
-        # Sort personal repositories by stargazers and fetch details for top 15 to find valid committed ones
-        sorted_repos = sorted(personal_repos, key=lambda x: x.get("stargazers_count", 0), reverse=True)[:15]
+        # 1. Screen and Score candidate repositories using advanced recruitment scoring logic (Stage 1 & 2)
+        scored_candidates = []
+        for r in personal_repos:
+            # HARD FILTERS check
+            if r.get("fork", False) or r.get("is_fork", False):
+                continue
+            if r.get("archived", False):
+                continue
+            if r.get("size", 0) <= 2: # Repositories with almost no code
+                continue
+                
+            name = r.get("name", "").lower()
+            description = (r.get("description") or "").lower()
+            topics = [t.lower() for t in r.get("topics", [])]
+            
+            # Mirror repositories filter
+            if "mirror" in name or "mirror" in description:
+                continue
+                
+            # Exclude trivial configuration, empty, templates, or pure coursework
+            exclude_keywords = [
+                "tutorial", "homework", "assignment", "lecture", 
+                "exercises", "practice", "hello-world", "helloworld", 
+                "template", "dotfiles", "configuration", "config", "setup",
+                "sandbox", "boilerplate", "leetcode", "hackerrank", "codewars", "interview-prep"
+            ]
+            
+            is_course_or_trivial = False
+            for kw in exclude_keywords:
+                if kw in name or kw in description or kw in topics:
+                    # Coursework exception: check if description claims substantial original work
+                    if any(claim in description for claim in ["original", "substantial", "custom", "independent", "own design"]):
+                        continue
+                    is_course_or_trivial = True
+                    break
+                    
+            if is_course_or_trivial:
+                continue
+                
+            # Score Calculation (Heuristics)
+            # Base score starts at 50
+            score = 50.0
+            
+            # Technical Complexity Boosts
+            # AI / ML / RAG / Multi-agent
+            ai_keywords = ["ai", "ml", "llm", "rag", "agent", "neural", "deep-learning", "pytorch", "tensorflow", "huggingface", "langchain", "llama", "gpt", "nlp", "computer-vision", "cv", "transformer"]
+            if any(kw in name or kw in description or kw in topics for kw in ai_keywords):
+                score += 35.0
+                
+            # Backend & Databases
+            backend_keywords = ["api", "backend", "database", "postgres", "mysql", "redis", "graphql", "rest-api", "fastapi", "django", "flask", "express", "nest", "spring-boot", "grpc", "convex"]
+            if any(kw in name or kw in description or kw in topics for kw in backend_keywords):
+                score += 20.0
+                
+            # Systems / Networking / Security / DevOps / Compiler
+            systems_keywords = ["compiler", "interpreter", "systems-programming", "rust", "go", "c++", "kernel", "docker", "kubernetes", "ci/cd", "security", "cryptography", "blockchain", "networking", "reverse-engineering", "browser-extension"]
+            if any(kw in name or kw in description or kw in topics for kw in systems_keywords):
+                score += 25.0
+                
+            # Full-Stack / Mobile
+            fullstack_keywords = ["full-stack", "fullstack", "react", "nextjs", "vue", "angular", "flutter", "react-native", "ios", "android"]
+            if any(kw in name or kw in description or kw in topics for kw in fullstack_keywords):
+                score += 15.0
+
+            # AI tool usage (Claude Code, Cursor, Windsurf) is welcomed and boosted when driven by user
+            ai_tools = ["claude-code", "cursor", "copilot", "windsurf", "ai-assisted", "agentic"]
+            if any(kw in name or kw in description or kw in topics for kw in ai_tools):
+                score += 10.0 # modern engineers leverage AI tools!
+                
+            # Details presence
+            if r.get("description"):
+                score += 10.0
+            if r.get("topics"):
+                score += 5.0
+            if r.get("language") and r.get("language") != "Other":
+                score += 5.0
+                
+            # Recency / Momentum boost
+            pushed_at_str = r.get("pushed_at")
+            if pushed_at_str:
+                try:
+                    from datetime import datetime, timezone
+                    # parse push date, usually ISO-8601 format e.g. "2026-05-30T18:00:00Z"
+                    push_date = datetime.strptime(pushed_at_str.replace("Z", "+00:00"), "%Y-%m-%dT%H:%M:%S%z")
+                    days_since_push = (datetime.now(timezone.utc) - push_date).days
+                    if days_since_push <= 90: # recent 3 months
+                        score += 15.0
+                    elif days_since_push <= 365: # recent year
+                        score += 5.0
+                except Exception:
+                    pass
+                    
+            # Deployment Link boost
+            homepage = r.get("homepage")
+            if homepage:
+                score += 15.0
+                
+            # Small, capped boost for Stars and Forks (to avoid star-bias)
+            stars = r.get("stargazers_count", 0)
+            forks = r.get("forks_count", 0)
+            score += min(stars * 1.0, 20.0) # max 20 points for stars
+            score += min(forks * 2.0, 10.0) # max 10 points for forks
+            
+            scored_candidates.append({
+                "repo": r,
+                "score": score
+            })
+            
+        # Sort by screening score descending and select top 18 candidates for deep detail fetching
+        scored_candidates = sorted(scored_candidates, key=lambda x: x["score"], reverse=True)
+        candidate_repos = [item["repo"] for item in scored_candidates[:18]]
         
         async with httpx.AsyncClient() as client:
             project_tasks = []
-            for repo in sorted_repos:
+            for repo in candidate_repos:
                 owner = profile.get("login") or username
                 name = repo.get("name")
                 default_branch = repo.get("default_branch", "main")
                 preloaded = repo.get("preloaded_commits")
                 
+                # Retrieve candidate's starting screening score
+                candidate_score = next(item["score"] for item in scored_candidates if item["repo"]["name"] == name)
+                
                 # Create concurrent async fetchers for each repository's deep details
-                async def fetch_all_repo_data(r=repo, o=owner, n=name, db=default_branch, p=preloaded):
+                async def fetch_all_repo_data(r=repo, o=owner, n=name, db=default_branch, p=preloaded, sc=candidate_score):
                     commits = await self.fetch_user_commits(client, o, n, username, preloaded=p)
                     # Discard repositories with absolutely zero commits
                     if not commits:
@@ -458,22 +570,71 @@ class GitHubAnalyzer:
                         "repo": r,
                         "commits": commits,
                         "readme": readme,
-                        "context": context
+                        "context": context,
+                        "base_score": sc
                     }
                 project_tasks.append(fetch_all_repo_data())
                 
             project_results = await asyncio.gather(*project_tasks, return_exceptions=True)
             
+            candidate_projects = []
             for res in project_results:
                 if res and not isinstance(res, Exception):
                     repo = res["repo"]
-                    # Strictly filter out any forks or repositories with 0 commits
+                    # Double check forks
                     if repo.get("fork", False) or repo.get("is_fork", False):
                         continue
                     if not res["commits"]:
                         continue
                         
-                    top_projects.append({
+                    # Calculate Deep Engineering Quality & Impact Score (Stage 3)
+                    final_score = res["base_score"]
+                    readme_text = res["readme"] or ""
+                    
+                    # A. README details (length and sections check)
+                    readme_len = len(readme_text)
+                    if readme_len > 2500:
+                        final_score += 15.0
+                    elif readme_len > 1000:
+                        final_score += 8.0
+                        
+                    # Check for professional sections in README
+                    readme_lower = readme_text.lower()
+                    if any(section in readme_lower for section in ["installation", "setup", "quick start", "getting started", "how to run"]):
+                        final_score += 5.0
+                    if any(section in readme_lower for section in ["architecture", "system design", "design doc", "components", "workflow"]):
+                        final_score += 10.0
+                    if any(section in readme_lower for section in ["testing", "unit tests", "run tests", "pytest", "jest"]):
+                        final_score += 5.0
+                        
+                    # B. Clean, structured commit messages
+                    user_commits = res["commits"]
+                    if len(user_commits) >= 5:
+                        final_score += 10.0
+                        
+                    # Check for semantic commits (feat, fix, refactor, docs, chore)
+                    semantic_patterns = ["feat:", "fix:", "refactor:", "docs:", "chore:", "test:", "feat(", "fix("]
+                    semantic_count = sum(1 for c in user_commits if any((c.get("message") or "").lower().startswith(p) for p in semantic_patterns))
+                    if semantic_count >= 2:
+                        final_score += 10.0
+                        
+                    # C. Engineering Quality Indicators (File Structure & Dependencies)
+                    file_tree = [f.lower() for f in res["context"].get("file_tree", [])]
+                    
+                    # CI/CD Workflows presence
+                    if any(".github/workflows" in f or "gitlab-ci" in f for f in file_tree):
+                        final_score += 15.0
+                    # Testing suite presence
+                    if any("test" in f or "spec" in f for f in file_tree):
+                        final_score += 10.0
+                    # Containerization config presence
+                    if any("dockerfile" in f or "docker-compose" in f for f in file_tree):
+                        final_score += 10.0
+                    # Dependency manifest presence
+                    if any(f in ["package.json", "requirements.txt", "cargo.toml", "go.mod", "gemfile", "pyproject.toml", "poetry.lock"] for f in [os.path.basename(p) for p in file_tree]):
+                        final_score += 10.0
+                        
+                    candidate_projects.append({
                         "name": repo.get("name"),
                         "description": repo.get("description") or "",
                         "stars": repo.get("stargazers_count", 0),
@@ -486,11 +647,40 @@ class GitHubAnalyzer:
                         "repo_languages": res["context"].get("languages", {}),
                         "file_tree": res["context"].get("file_tree", []),
                         "dependencies": res["context"].get("dependencies", []),
-                        "source_code": res["context"].get("source_code", [])
+                        "source_code": res["context"].get("source_code", []),
+                        "score": final_score
                     })
+                    
+            # 4. Diversity Selection Pass (MMR Greedy Selection to prevent redundant skills)
+            # Maximize diversity by applying similarity penalty for same language/topics
+            selected_projects = []
+            remaining_projects = sorted(candidate_projects, key=lambda x: x["score"], reverse=True)
             
-            # Slice down to the top 7 high-quality personal repositories with active commits!
-            top_projects = top_projects[:7]
+            selected_languages = set()
+            
+            while len(selected_projects) < 7 and remaining_projects:
+                # 1. Pop the highest scoring project
+                best_project = remaining_projects[0]
+                selected_projects.append(best_project)
+                
+                # 2. Add its language to selection
+                lang = best_project["language"]
+                if lang and lang != "Other":
+                    selected_languages.add(lang.lower())
+                    
+                # 3. Remove selected project from pool
+                remaining_projects = remaining_projects[1:]
+                
+                # 4. Apply diversity penalties to remaining candidates matching selected languages
+                for rp in remaining_projects:
+                    rp_lang = rp["language"]
+                    if rp_lang and rp_lang != "Other" and rp_lang.lower() in selected_languages:
+                        rp["score"] -= 20.0 # Apply diversity penalty for duplicate primary technology
+                        
+                # 5. Re-sort remaining pool for the next pass
+                remaining_projects = sorted(remaining_projects, key=lambda x: x["score"], reverse=True)
+                
+            top_projects = selected_projects
 
         # 5. HIGH PERFORMANCE Set-Based Keyword Skill Matching (Fixes O(N) list searches)
         detected_languages = list(languages_dict.keys())
