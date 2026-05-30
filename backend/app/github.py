@@ -698,7 +698,13 @@ class GitHubAnalyzer:
                 # 5. Re-sort remaining pool for the next pass
                 remaining_projects = sorted(remaining_projects, key=lambda x: x["score"], reverse=True)
                 
-            top_projects = selected_projects
+            # Mark recommended projects in the main candidates list
+            recommended_names = {p["name"] for p in selected_projects}
+            for cp in candidate_projects:
+                cp["is_recommended"] = cp["name"] in recommended_names
+                
+            # Set top_projects to include ALL candidate projects sorted by score, so user has complete curation freedom
+            top_projects = sorted(candidate_projects, key=lambda x: x["score"], reverse=True)
 
         # 5. HIGH PERFORMANCE Set-Based Keyword Skill Matching (Fixes O(N) list searches)
         detected_languages = list(languages_dict.keys())

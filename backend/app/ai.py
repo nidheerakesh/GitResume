@@ -1049,7 +1049,7 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
             GitHub Profile: {github_data.get('github', '')}
             Bio: {github_data.get('bio', '')}
             Top Projects: {pruned_projects}
-            Detected Skills: {github_data.get('skills', {})}
+            Detected Skills: {github_data.get('detected_skills') or github_data.get('skills', {})}
             """
 
         prompt = f"""

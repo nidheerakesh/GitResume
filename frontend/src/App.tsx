@@ -350,7 +350,11 @@ function App() {
       }
       const githubAnalysis = await res.json();
       setLoadedGitHubData(githubAnalysis);
-      setSelectedRepos((githubAnalysis.top_projects || []).slice(0, 7).map((p: any) => p.name));
+      
+      const allProjects = githubAnalysis.top_projects || [];
+      const recommended = allProjects.filter((p: any) => p.is_recommended).map((p: any) => p.name);
+      setSelectedRepos(recommended.length > 0 ? recommended : allProjects.slice(0, 7).map((p: any) => p.name));
+      
       alert('GitHub repositories successfully scanned & loaded into active session!');
     } catch (err: any) {
       console.error(err);
