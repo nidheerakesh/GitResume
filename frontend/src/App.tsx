@@ -1713,11 +1713,6 @@ function App() {
         alignItems: 'center',
         gap: '1rem'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-          <span>GitResume is <strong>100% Open Source</strong></span>
-          <span style={{ color: 'var(--border-light)' }}>|</span>
-          <span>Released under the MIT License</span>
-        </div>
         <p style={{
           color: 'var(--text-muted)',
           fontSize: '0.875rem',
