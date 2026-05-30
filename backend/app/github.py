@@ -429,9 +429,14 @@ class GitHubAnalyzer:
                 for lang, count in sorted(languages_dict.items(), key=lambda x: x[1], reverse=True)
             ]
 
-        # 4. Asynchronously fetch deep info for top 7 projects concurrently!
+        # 4. Asynchronously fetch deep info for top personal projects (non-forks) with active commits concurrently!
         top_projects = []
-        sorted_repos = sorted(repos, key=lambda x: x.get("stargazers_count", 0), reverse=True)[:7]
+        
+        # Explicitly filter repos to only keep non-forks (personal/source repositories)
+        personal_repos = [r for r in repos if not r.get("fork", False) and not r.get("is_fork", False)]
+        
+        # Sort personal repositories by stargazers and fetch details for top 15 to find valid committed ones
+        sorted_repos = sorted(personal_repos, key=lambda x: x.get("stargazers_count", 0), reverse=True)[:15]
         
         async with httpx.AsyncClient() as client:
             project_tasks = []
@@ -444,6 +449,7 @@ class GitHubAnalyzer:
                 # Create concurrent async fetchers for each repository's deep details
                 async def fetch_all_repo_data(r=repo, o=owner, n=name, db=default_branch, p=preloaded):
                     commits = await self.fetch_user_commits(client, o, n, username, preloaded=p)
+                    # Discard repositories with absolutely zero commits
                     if not commits:
                         return None
                     readme = await self.fetch_repo_readme(client, o, n)
@@ -461,6 +467,12 @@ class GitHubAnalyzer:
             for res in project_results:
                 if res and not isinstance(res, Exception):
                     repo = res["repo"]
+                    # Strictly filter out any forks or repositories with 0 commits
+                    if repo.get("fork", False) or repo.get("is_fork", False):
+                        continue
+                    if not res["commits"]:
+                        continue
+                        
                     top_projects.append({
                         "name": repo.get("name"),
                         "description": repo.get("description") or "",
@@ -476,6 +488,9 @@ class GitHubAnalyzer:
                         "dependencies": res["context"].get("dependencies", []),
                         "source_code": res["context"].get("source_code", [])
                     })
+            
+            # Slice down to the top 7 high-quality personal repositories with active commits!
+            top_projects = top_projects[:7]
 
         # 5. HIGH PERFORMANCE Set-Based Keyword Skill Matching (Fixes O(N) list searches)
         detected_languages = list(languages_dict.keys())

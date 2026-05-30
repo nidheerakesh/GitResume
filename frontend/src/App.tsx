@@ -216,6 +216,10 @@ function App() {
   // Resume Import & Resource Aggregator States
   const [loadedGitHubData, setLoadedGitHubData] = useState<any>(null);
   const [selectedRepos, setSelectedRepos] = useState<string[]>([]);
+  const [repoSearchQuery, setRepoSearchQuery] = useState('');
+  const [repoLanguageFilter, setRepoLanguageFilter] = useState('All');
+  const [repoSortBy, setRepoSortBy] = useState<'stars' | 'name'>('stars');
+  const [repoLimitWarning, setRepoLimitWarning] = useState(false);
   const [loadedPdfText, setLoadedPdfText] = useState<string>('');
   const [loadedPdfFilename, setLoadedPdfFilename] = useState<string>('');
   const [loadedLinkedinText, setLoadedLinkedinText] = useState<string>('');
@@ -330,7 +334,7 @@ function App() {
       }
       const githubAnalysis = await res.json();
       setLoadedGitHubData(githubAnalysis);
-      setSelectedRepos((githubAnalysis.top_projects || []).map((p: any) => p.name));
+      setSelectedRepos((githubAnalysis.top_projects || []).slice(0, 7).map((p: any) => p.name));
       alert('GitHub repositories successfully scanned & loaded into active session!');
     } catch (err: any) {
       console.error(err);
@@ -1018,94 +1022,330 @@ function App() {
                     </div>
                   </div>
 
-                  {/* High Fidelity Collapsible Repository Selection checklist */}
-                  {loadedGitHubData && loadedGitHubData.top_projects && loadedGitHubData.top_projects.length > 0 && (
-                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem', width: '100%' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          Select repositories to include in your resume:
-                          <span style={{ fontSize: '0.7rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '10px' }}>
-                            {selectedRepos.length} / {loadedGitHubData.top_projects.length} Selected
-                          </span>
-                        </span>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button 
-                            className="btn btn-secondary btn-sm" 
-                            style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderColor: 'rgba(255,255,255,0.05)' }}
-                            onClick={() => setSelectedRepos((loadedGitHubData.top_projects || []).map((p: any) => p.name))}
-                          >
-                            Select All
-                          </button>
-                          <button 
-                            className="btn btn-secondary btn-sm" 
-                            style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderColor: 'rgba(255,255,255,0.05)' }}
-                            onClick={() => setSelectedRepos([])}
-                          >
-                            Clear All
-                          </button>
-                        </div>
-                      </div>
+                  {/* Premium, High-Fidelity Repository Curation Dashboard */}
+                  {loadedGitHubData && loadedGitHubData.top_projects && loadedGitHubData.top_projects.length > 0 && (() => {
+                    // 1. Gather all unique languages dynamically
+                    const uniqueLanguages = ['All', ...Array.from(new Set(
+                      (loadedGitHubData.top_projects || [])
+                        .map((repo: any) => repo.language)
+                        .filter(Boolean)
+                    )) as string[]];
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem', maxHeight: '250px', overflowY: 'auto', paddingRight: '0.25rem' }}>
-                        {loadedGitHubData.top_projects.map((repo: any) => {
-                          const isChecked = selectedRepos.includes(repo.name);
-                          return (
-                            <div 
-                              key={repo.name}
-                              onClick={() => {
-                                if (isChecked) {
-                                  setSelectedRepos(selectedRepos.filter(name => name !== repo.name));
-                                } else {
-                                  setSelectedRepos([...selectedRepos, repo.name]);
-                                }
-                              }}
-                              style={{
-                                padding: '0.75rem',
-                                borderRadius: 'var(--radius-sm)',
-                                background: isChecked ? 'rgba(16, 185, 129, 0.04)' : 'rgba(255,255,255,0.01)',
-                                border: isChecked ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255,255,255,0.04)',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                display: 'flex',
-                                flexDirection: 'column',
+                    // 2. Filter & Sort projects
+                    const filteredProjects = (loadedGitHubData.top_projects || [])
+                      .filter((repo: any) => {
+                        const matchesSearch = repo.name.toLowerCase().includes(repoSearchQuery.toLowerCase()) || 
+                                              (repo.description || '').toLowerCase().includes(repoSearchQuery.toLowerCase());
+                        const matchesLanguage = repoLanguageFilter === 'All' || repo.language === repoLanguageFilter;
+                        return matchesSearch && matchesLanguage;
+                      })
+                      .sort((a: any, b: any) => {
+                        if (repoSortBy === 'stars') {
+                          return (b.stars || 0) - (a.stars || 0);
+                        } else {
+                          return a.name.localeCompare(b.name);
+                        }
+                      });
+
+                    return (
+                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.25rem', width: '100%' }}>
+                        
+                        {/* Title and Selection Progress Dashboard */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                          <div>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              Curation Engine
+                              <span style={{ 
+                                fontSize: '0.7rem', 
+                                fontWeight: 700,
+                                color: selectedRepos.length === 7 ? '#10b981' : '#a855f7', 
+                                background: selectedRepos.length === 7 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(168, 85, 247, 0.08)', 
+                                padding: '0.15rem 0.5rem', 
+                                borderRadius: '12px',
+                                border: selectedRepos.length === 7 ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(168, 85, 247, 0.15)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
                                 gap: '0.25rem',
-                                position: 'relative'
+                                transition: 'all 0.3s ease'
+                              }}>
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: selectedRepos.length === 7 ? '#10b981' : '#a855f7', display: 'inline-block' }}></span>
+                                {selectedRepos.length} / 7 Target Projects
+                              </span>
+                            </span>
+                            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                              Select up to 7 high-impact repositories to construct your professional resume sections.
+                            </p>
+                          </div>
+                          
+                          {/* Bulk Actions */}
+                          <div style={{ display: 'flex', gap: '0.4rem' }}>
+                            <button 
+                              className="btn btn-secondary btn-sm" 
+                              style={{ fontSize: '0.65rem', padding: '0.25rem 0.6rem', background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.05)' }}
+                              onClick={() => {
+                                // Select up to 7 projects automatically
+                                setSelectedRepos((loadedGitHubData.top_projects || []).slice(0, 7).map((p: any) => p.name));
                               }}
                             >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: isChecked ? '#10b981' : 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '80%' }}>
-                                  {repo.name}
-                                </span>
-                                <input 
-                                  type="checkbox" 
-                                  checked={isChecked}
-                                  onChange={() => {}} // handled by parent onClick
-                                  style={{ cursor: 'pointer', accentColor: '#10b981' }} 
-                                />
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.1rem' }}>
-                                {repo.language && (
-                                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', padding: '0.05rem 0.25rem', borderRadius: '3px' }}>
-                                    {repo.language}
-                                  </span>
-                                )}
-                                {repo.stars > 0 && (
-                                  <span style={{ fontSize: '0.6rem', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.1rem' }}>
-                                    ★ {repo.stars}
-                                  </span>
-                                )}
-                              </div>
-                              {repo.description && (
-                                <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.35', marginTop: '0.25rem' }}>
-                                  {repo.description}
-                                </p>
+                              Reset to Auto-7
+                            </button>
+                            <button 
+                              className="btn btn-secondary btn-sm" 
+                              style={{ fontSize: '0.65rem', padding: '0.25rem 0.6rem', background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.05)' }}
+                              onClick={() => setSelectedRepos([])}
+                            >
+                              Deselect All
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Search & Dynamic Filter Controls */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: 'var(--radius-sm)', padding: '0.75rem' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', width: '100%' }}>
+                            {/* Search box */}
+                            <div style={{ position: 'relative', flex: 1 }}>
+                              <svg style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', width: '12px', height: '12px', color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                              </svg>
+                              <input
+                                type="text"
+                                placeholder="Search repositories by name or keyword..."
+                                value={repoSearchQuery}
+                                onChange={(e) => setRepoSearchQuery(e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '0.35rem 0.65rem 0.35rem 1.8rem',
+                                  fontSize: '0.75rem',
+                                  background: 'rgba(255,255,255,0.02)',
+                                  border: '1px solid rgba(255,255,255,0.08)',
+                                  borderRadius: 'var(--radius-xs)',
+                                  color: 'var(--text-primary)',
+                                  outline: 'none',
+                                  transition: 'all 0.2s ease',
+                                }}
+                                onFocus={(e) => e.target.style.borderColor = 'rgba(168, 85, 247, 0.4)'}
+                                onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
+                              />
+                              {repoSearchQuery && (
+                                <button 
+                                  onClick={() => setRepoSearchQuery('')}
+                                  style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'pointer', padding: 0 }}
+                                >
+                                  ×
+                                </button>
                               )}
                             </div>
-                          );
-                        })}
+
+                            {/* Sort selector */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Sort:</span>
+                              <div style={{ display: 'flex', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 'var(--radius-xs)', padding: '0.1rem' }}>
+                                <button
+                                  style={{
+                                    fontSize: '0.65rem',
+                                    padding: '0.15rem 0.4rem',
+                                    border: 'none',
+                                    borderRadius: '3px',
+                                    background: repoSortBy === 'stars' ? 'rgba(255,255,255,0.06)' : 'none',
+                                    color: repoSortBy === 'stars' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                    cursor: 'pointer',
+                                    fontWeight: repoSortBy === 'stars' ? 600 : 400
+                                  }}
+                                  onClick={() => setRepoSortBy('stars')}
+                                >
+                                  Stars
+                                </button>
+                                <button
+                                  style={{
+                                    fontSize: '0.65rem',
+                                    padding: '0.15rem 0.4rem',
+                                    border: 'none',
+                                    borderRadius: '3px',
+                                    background: repoSortBy === 'name' ? 'rgba(255,255,255,0.06)' : 'none',
+                                    color: repoSortBy === 'name' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                    cursor: 'pointer',
+                                    fontWeight: repoSortBy === 'name' ? 600 : 400
+                                  }}
+                                  onClick={() => setRepoSortBy('name')}
+                                >
+                                  Name
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Language Pill Row */}
+                          <div style={{ display: 'flex', gap: '0.35rem', overflowX: 'auto', paddingBottom: '0.2rem', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            {uniqueLanguages.map((lang) => {
+                              const count = lang === 'All' 
+                                ? (loadedGitHubData.top_projects || []).length
+                                : (loadedGitHubData.top_projects || []).filter((r: any) => r.language === lang).length;
+                              const isActive = repoLanguageFilter === lang;
+                              
+                              return (
+                                <button
+                                  key={lang}
+                                  onClick={() => setRepoLanguageFilter(lang)}
+                                  style={{
+                                    fontSize: '0.65rem',
+                                    padding: '0.15rem 0.5rem',
+                                    borderRadius: '10px',
+                                    whiteSpace: 'nowrap',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    border: isActive ? '1px solid rgba(168, 85, 247, 0.4)' : '1px solid rgba(255,255,255,0.04)',
+                                    background: isActive ? 'rgba(168, 85, 247, 0.1)' : 'rgba(255,255,255,0.02)',
+                                    color: isActive ? '#a855f7' : 'var(--text-muted)',
+                                    fontWeight: isActive ? 600 : 400
+                                  }}
+                                >
+                                  {lang} <span style={{ opacity: 0.6, fontSize: '0.55rem' }}>({count})</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Capacity warning alert */}
+                        {repoLimitWarning && (
+                          <div style={{ 
+                            background: 'rgba(245, 158, 11, 0.1)', 
+                            border: '1px solid rgba(245, 158, 11, 0.3)', 
+                            borderRadius: 'var(--radius-sm)', 
+                            padding: '0.5rem 0.75rem', 
+                            marginBottom: '0.75rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            fontSize: '0.7rem',
+                            color: '#fbbf24',
+                          }}>
+                            <svg style={{ width: '14px', height: '14px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            You have reached the maximum target of 7 repositories. Deselect a project to include this one!
+                          </div>
+                        )}
+
+                        {/* List grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.75rem', maxHeight: '280px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                          {filteredProjects.length === 0 ? (
+                            <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100px', border: '1px dashed rgba(255,255,255,0.06)', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                              No repositories match search or filter.
+                            </div>
+                          ) : (
+                            filteredProjects.map((repo: any) => {
+                              const isSelected = selectedRepos.includes(repo.name);
+                              const hasHighStars = repo.stars >= 5;
+                              
+                              return (
+                                <div 
+                                  key={repo.name}
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      setSelectedRepos(selectedRepos.filter(name => name !== repo.name));
+                                    } else {
+                                      if (selectedRepos.length >= 7) {
+                                        setRepoLimitWarning(true);
+                                        setTimeout(() => setRepoLimitWarning(false), 4000);
+                                      } else {
+                                        setSelectedRepos([...selectedRepos, repo.name]);
+                                      }
+                                    }
+                                  }}
+                                  style={{
+                                    padding: '0.85rem',
+                                    borderRadius: 'var(--radius-sm)',
+                                    background: isSelected ? 'rgba(168, 85, 247, 0.04)' : 'rgba(255,255,255,0.01)',
+                                    border: isSelected ? '1px solid rgba(168, 85, 247, 0.3)' : '1px solid rgba(255,255,255,0.04)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.35rem',
+                                    position: 'relative',
+                                    boxShadow: isSelected ? '0 4px 12px rgba(168, 85, 247, 0.05)' : 'none',
+                                    transform: isSelected ? 'scale(1.01)' : 'none',
+                                  }}
+                                >
+                                  {/* Selection Check indicator */}
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: isSelected ? '#a855f7' : 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '80%' }}>
+                                      {repo.name}
+                                    </span>
+                                    <div style={{ 
+                                      width: '14px', 
+                                      height: '14px', 
+                                      borderRadius: '3px', 
+                                      border: isSelected ? '1px solid #a855f7' : '1px solid rgba(255,255,255,0.15)',
+                                      background: isSelected ? '#a855f7' : 'transparent',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      transition: 'all 0.2s ease',
+                                      cursor: 'pointer'
+                                    }}>
+                                      {isSelected && (
+                                        <svg style={{ width: '10px', height: '10px', color: '#fff' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Metrics & Languages */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                    {repo.language && (
+                                      <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', padding: '0.05rem 0.35rem', borderRadius: '3px', border: '1px solid rgba(255,255,255,0.02)' }}>
+                                        {repo.language}
+                                      </span>
+                                    )}
+                                    {repo.stars > 0 && (
+                                      <span style={{ fontSize: '0.6rem', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.1rem', fontWeight: 600 }}>
+                                        ★ {repo.stars}
+                                      </span>
+                                    )}
+                                    {repo.forks > 0 && (
+                                      <span style={{ fontSize: '0.6rem', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '0.1rem' }}>
+                                        ⌥ {repo.forks}
+                                      </span>
+                                    )}
+                                    {hasHighStars && (
+                                      <span style={{ fontSize: '0.55rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.08)', padding: '0.05rem 0.25rem', borderRadius: '4px', fontWeight: 600 }}>
+                                        Popular
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Description */}
+                                  {repo.description ? (
+                                    <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.4', marginTop: '0.15rem' }}>
+                                      {repo.description}
+                                    </p>
+                                  ) : (
+                                    <p style={{ margin: 0, fontSize: '0.7rem', color: 'rgba(255,255,255,0.15)', fontStyle: 'italic', marginTop: '0.15rem' }}>
+                                      No description provided.
+                                    </p>
+                                  )}
+
+                                  {/* Render small tag badges if topics are present */}
+                                  {repo.topics && repo.topics.length > 0 && (
+                                    <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                                      {repo.topics.slice(0, 3).map((topic: string) => (
+                                        <span key={topic} style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.02)', padding: '0.02rem 0.2rem', borderRadius: '3px' }}>
+                                          #{topic}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
 
                 {/* 2. UPLOAD RESUME AS PDF */}
