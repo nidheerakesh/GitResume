@@ -94,7 +94,7 @@ def health_check():
     return {"status": "healthy", "service": "GitResume API"}
 
 @app.get("/api/github/profile/{username}")
-def get_github_profile(username: str, token: Optional[str] = None):
+async def get_github_profile(username: str, token: Optional[str] = None):
     """
     Fetches the public profile, top repos, languages, and skills of a GitHub user.
     (Legacy GET endpoint — token via query param, kept for backward compatibility.)
@@ -104,13 +104,13 @@ def get_github_profile(username: str, token: Optional[str] = None):
         
     try:
         analyzer = GitHubAnalyzer(token=token)
-        analysis = analyzer.analyze_profile(username)
+        analysis = await analyzer.analyze_profile(username)
         return analysis
     except Exception as e:
         raise HTTPException(status_code=500, detail=sanitize_error(str(e)))
 
 @app.post("/api/github/profile/{username}")
-def post_github_profile(username: str, req: GitHubProfileRequest):
+async def post_github_profile(username: str, req: GitHubProfileRequest):
     """
     Fetches the public profile, top repos, languages, and skills of a GitHub user.
     Token is accepted securely in the request body instead of as a query parameter.
@@ -120,7 +120,7 @@ def post_github_profile(username: str, req: GitHubProfileRequest):
         
     try:
         analyzer = GitHubAnalyzer(token=req.token)
-        analysis = analyzer.analyze_profile(username)
+        analysis = await analyzer.analyze_profile(username)
         return analysis
     except Exception as e:
         raise HTTPException(status_code=500, detail=sanitize_error(str(e)))

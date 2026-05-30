@@ -1,5 +1,26 @@
-import requests
+import httpx
+import asyncio
+import time
+import base64
+import os
 from typing import Dict, List, Any
+
+class GitHubCache:
+    _cache = {}
+    
+    @classmethod
+    def get(cls, key: str):
+        item = cls._cache.get(key)
+        if item and time.time() - item["timestamp"] < 600: # 10 mins TTL
+            return item["data"]
+        return None
+        
+    @classmethod
+    def set(cls, key: str, data: Any):
+        cls._cache[key] = {
+            "data": data,
+            "timestamp": time.time()
+        }
 
 class GitHubAnalyzer:
     def __init__(self, token: str = None):
@@ -7,285 +28,393 @@ class GitHubAnalyzer:
         self.headers = {}
         if token:
             self.headers["Authorization"] = f"token {token}"
+            # GraphQL authorization needs standard Bearer or token
+            self.graphql_headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        else:
+            self.graphql_headers = {}
+            
         self.headers["Accept"] = "application/vnd.github.v3+json"
         self._rate_limit_remaining = None
-        
-    def _check_rate_limit(self, response: requests.Response):
+
+    def _check_rate_limit(self, headers):
         """Track GitHub API rate limit from response headers."""
-        remaining = response.headers.get("X-RateLimit-Remaining")
+        remaining = headers.get("X-RateLimit-Remaining")
         if remaining is not None:
             self._rate_limit_remaining = int(remaining)
-    
+            
     def _has_rate_budget(self, needed: int = 1) -> bool:
-        """Check if we have enough rate limit budget for additional API calls."""
         if self._rate_limit_remaining is None:
-            return True  # Unknown, assume OK
+            return True
         return self._rate_limit_remaining > needed
-        
-    def _safe_get(self, url: str, timeout: int = 10) -> requests.Response:
-        """Make a GET request and track rate limits."""
-        res = requests.get(url, headers=self.headers, timeout=timeout)
-        self._check_rate_limit(res)
+
+    async def _safe_get(self, client: httpx.AsyncClient, url: str, timeout: int = 10) -> httpx.Response:
+        """Make a GET request using the async client and track rate limits."""
+        res = await client.get(url, headers=self.headers, timeout=timeout)
+        self._check_rate_limit(res.headers)
         return res
 
+    async def fetch_user_data_graphql(self, username: str) -> Dict[str, Any]:
+        """
+        Fetches GitHub profile, repositories, languages, and commits using a single
+        high-performance GraphQL query. Reduces requests by 10-15x!
+        """
+        if not self.token:
+            raise Exception("GraphQL API requires a Personal Access Token (PAT).")
+            
+        query = """
+        query ($username: String!) {
+          user(login: $username) {
+            name
+            login
+            avatarUrl
+            bio
+            email
+            followers {
+              totalCount
+            }
+            repositories(first: 50, privacy: PUBLIC, isFork: false, orderBy: {field: STARGAZERS, direction: DESC}) {
+              nodes {
+                name
+                description
+                stargazerCount: stargazerCount
+                forksCount: forkCount
+                html_url: url
+                language: primaryLanguage {
+                  name
+                }
+                languages(first: 5) {
+                  edges {
+                    size
+                    node {
+                      name
+                    }
+                  }
+                }
+                defaultBranchRef {
+                  name
+                }
+                ref(qualifiedName: "main") {
+                  target {
+                    ... on Commit {
+                      history(first: 3) {
+                        nodes {
+                          message
+                          sha: oid
+                        }
+                      }
+                    }
+                  }
+                }
+                masterRef: ref(qualifiedName: "master") {
+                  target {
+                    ... on Commit {
+                      history(first: 3) {
+                        nodes {
+                          message
+                          sha: oid
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
         
-    def fetch_user_data(self, username: str) -> Dict[str, Any]:
-        """
-        Fetches GitHub profile and repo information for a user.
-        If requests fail (e.g. rate limit, invalid user), raises Exception.
-        """
-        # Fetch profile
+        async with httpx.AsyncClient() as client:
+            res = await client.post(
+                "https://api.github.com/graphql",
+                json={"query": query, "variables": {"username": username}},
+                headers=self.graphql_headers,
+                timeout=15
+            )
+            
+            if res.status_code == 200:
+                data = res.json()
+                if "errors" in data:
+                    raise Exception(f"GraphQL Errors: {data['errors']}")
+                    
+                user_data = data.get("data", {}).get("user")
+                if not user_data:
+                    raise Exception(f"GitHub user '{username}' was not found.")
+                    
+                # Standardize GraphQL response structure to match REST profile schema
+                profile = {
+                    "name": user_data.get("name"),
+                    "login": user_data.get("login"),
+                    "avatar_url": user_data.get("avatarUrl"),
+                    "bio": user_data.get("bio"),
+                    "email": user_data.get("email"),
+                    "followers": user_data.get("followers", {}).get("totalCount", 0)
+                }
+                
+                # Format repositories
+                repos = []
+                for repo in user_data.get("repositories", {}).get("nodes", []):
+                    # Combine main or master branch commits
+                    commits_nodes = []
+                    ref_main = repo.get("defaultBranchRef", {}).get("name", "main")
+                    ref_data = repo.get("ref") or repo.get("masterRef")
+                    if ref_data:
+                        commits_nodes = ref_data.get("target", {}).get("history", {}).get("nodes", [])
+                    
+                    formatted_commits = [
+                        {"message": c.get("message"), "sha": c.get("sha")}
+                        for c in commits_nodes
+                    ]
+                    
+                    repos.append({
+                        "name": repo.get("name"),
+                        "description": repo.get("description"),
+                        "stargazers_count": repo.get("stargazerCount", 0),
+                        "forks_count": repo.get("forksCount", 0),
+                        "html_url": repo.get("html_url"),
+                        "language": repo.get("language", {}).get("name") if repo.get("language") else None,
+                        "default_branch": ref_main,
+                        "preloaded_commits": formatted_commits
+                    })
+                    
+                return {
+                    "profile": profile,
+                    "repositories": repos
+                }
+            else:
+                raise Exception(f"GraphQL Endpoint error: {res.status_code} - {res.text}")
+
+    async def fetch_user_data_rest(self, client: httpx.AsyncClient, username: str) -> Dict[str, Any]:
+        """REST fallback if no PAT token is provided."""
         profile_url = f"https://api.github.com/users/{username}"
-        profile_res = self._safe_get(profile_url)
+        profile_res = await self._safe_get(client, profile_url)
         
         if profile_res.status_code != 200:
             if profile_res.status_code == 403:
                 remaining = profile_res.headers.get("X-RateLimit-Remaining", "0")
-                reset_ts = profile_res.headers.get("X-RateLimit-Reset", "")
-                import time
-                reset_msg = ""
-                if reset_ts:
-                    try:
-                        reset_in = int(reset_ts) - int(time.time())
-                        if reset_in > 0:
-                            reset_msg = f" Rate limit resets in {reset_in // 60} minutes."
-                    except:
-                        pass
-                raise Exception(
-                    f"GitHub API rate limit exceeded (remaining: {remaining}).{reset_msg} "
-                    f"To fix this, paste a free GitHub Personal Access Token (PAT) on the login screen. "
-                    f"You can create one at https://github.com/settings/tokens with no special scopes needed."
-                )
+                raise Exception(f"GitHub API rate limit exceeded (remaining: {remaining}). Please provide a PAT.")
             elif profile_res.status_code == 404:
-                raise Exception(f"GitHub user '{username}' was not found. Please double check the username.")
-            raise Exception(f"Failed to fetch profile for user {username}: {profile_res.text}")
+                raise Exception(f"GitHub user '{username}' was not found.")
+            raise Exception(f"REST fetch failed: {profile_res.text}")
             
         profile = profile_res.json()
         
-        # Fetch repos (up to 100 public repos)
         repos_url = f"https://api.github.com/users/{username}/repos?per_page=100&type=owner"
-        repos_res = self._safe_get(repos_url)
+        repos_res = await self._safe_get(client, repos_url)
         
-        if repos_res.status_code != 200:
-            if repos_res.status_code == 403:
-                # We got the profile but hit rate limit on repos — return partial data
-                print(f"Rate limit hit fetching repos for {username}, returning profile-only data")
-                return {
-                    "profile": profile,
-                    "repositories": []
-                }
-            raise Exception(f"Failed to fetch repositories for user {username}: {repos_res.text}")
-            
-        repos = repos_res.json()
-        
+        repos = repos_res.json() if repos_res.status_code == 200 else []
         return {
             "profile": profile,
             "repositories": repos
         }
 
-    def fetch_user_commits(self, owner: str, repo: str, username: str) -> list:
-        """
-        Optimized Code Harvester: Fetches up to 3 commits and fetches diffs for the latest 2 commits 
-        to preserve API rate limits while maintaining rich developer context.
-        Gracefully skips if rate limit budget is exhausted.
-        """
-        # Skip if rate limit budget is too low (need ~3 calls per repo for commits)
-        if not self._has_rate_budget(3):
-            print(f"Skipping commit fetch for {owner}/{repo} — rate limit budget low ({self._rate_limit_remaining} remaining)")
-            return [{"message": "Contributed code to this repository", "code_diffs": []}]
-            
-        try:
-            # Query up to 3 recent commits by this author
-            commits_url = f"https://api.github.com/repos/{owner}/{repo}/commits?author={username}&per_page=3"
-            res = self._safe_get(commits_url)
-            if res.status_code == 200:
-                commits = res.json()
-                contributions = []
-                # Restrict to top 2 commits detail fetches to prevent hitting rate limits
-                for c in commits[:2]:
-                    sha = c.get("sha")
-                    commit_msg = c.get("commit", {}).get("message", "Contributed code")
-                    if not sha:
-                        continue
-                    
-                    # Only fetch diffs if we have rate budget
-                    code_changes = []
-                    if self._has_rate_budget(2):
-                        # Fetch direct files changed and their code patches (diffs)
-                        detail_url = f"https://api.github.com/repos/{owner}/{repo}/commits/{sha}"
-                        detail_res = self._safe_get(detail_url)
-                        
-                        if detail_res.status_code == 200:
-                            detail_data = detail_res.json()
-                            files = detail_data.get("files", [])
-                            for f in files:  # Inspect modified files
-                                filename = f.get("filename")
-                                patch = f.get("patch")
-                                if filename and patch:
-                                    # Keep patch modifications
-                                    clean_patch = patch.replace('\n', '\n        ')
-                                    code_changes.append(f"File: {filename}\n        Code Diffs:\n        {clean_patch}")
-                    
-                    contributions.append({
-                        "message": commit_msg.strip(),
-                        "code_diffs": code_changes
-                    })
-                return contributions if contributions else [{"message": "Contributed code to this repository", "code_diffs": []}]
-            elif res.status_code == 403:
-                # Rate limited — return a placeholder commit so the repo isn't skipped entirely
-                return [{"message": "Contributed code to this repository", "code_diffs": []}]
-        except Exception as e:
-            print(f"Failed to fetch detailed code diffs for {owner}/{repo}: {e}")
-        return []
-
-
-    def fetch_repo_readme(self, owner: str, repo: str) -> str:
-        """
-        Fetches and decodes the README file for a repository.
-        Returns the first ~1500 chars of the README content, or empty string on failure.
-        Skips if rate limit budget is exhausted.
-        """
+    async def fetch_repo_readme(self, client: httpx.AsyncClient, owner: str, repo: str) -> str:
         if not self._has_rate_budget(2):
             return ""
         try:
             url = f"https://api.github.com/repos/{owner}/{repo}/readme"
-            res = self._safe_get(url)
+            res = await self._safe_get(client, url)
             if res.status_code == 200:
-                import base64
                 data = res.json()
                 content = base64.b64decode(data.get("content", "")).decode("utf-8", errors="ignore")
-                # Truncate to keep prompt budgets sane
                 return content[:1500]
-        except Exception as e:
-            print(f"Failed to fetch README for {owner}/{repo}: {e}")
+        except:
+            pass
         return ""
 
-    def fetch_repo_context(self, owner: str, repo: str, default_branch: str = "main") -> dict:
-        """
-        Fetches deep code context for a repository:
-        - Language breakdown (bytes per language)
-        - Root file listing (project structure)
-        - Key dependency files (package.json deps, requirements.txt)
-        - Actual source code samples (e.g., main.py, app.tsx) for deep AI code analysis
-        """
+    async def fetch_user_commits(self, client: httpx.AsyncClient, owner: str, repo: str, username: str, preloaded: list = None) -> list:
+        """Asynchronously harvests up to 3 commits and fetches diff patches concurrently."""
+        if not self._has_rate_budget(3):
+            return [{"message": "Contributed code to this repository", "code_diffs": []}]
+            
+        try:
+            # If we preloaded commits via GraphQL, bypass the commits list fetch!
+            commits = preloaded
+            if commits is None:
+                commits_url = f"https://api.github.com/repos/{owner}/{repo}/commits?author={username}&per_page=3"
+                res = await self._safe_get(client, commits_url)
+                if res.status_code != 200:
+                    return [{"message": "Contributed code to this repository", "code_diffs": []}]
+                commits = res.json()
+                
+            contributions = []
+            
+            # Fetch commit diffs concurrently for the top 2 commits using asyncio.gather!
+            diff_tasks = []
+            valid_commits = [c for c in commits[:2] if c.get("sha")]
+            
+            for c in valid_commits:
+                sha = c.get("sha")
+                if self._has_rate_budget(2):
+                    detail_url = f"https://api.github.com/repos/{owner}/{repo}/commits/{sha}"
+                    diff_tasks.append(self._safe_get(client, detail_url))
+                    
+            if diff_tasks:
+                diff_responses = await asyncio.gather(*diff_tasks, return_exceptions=True)
+                for c, res in zip(valid_commits, diff_responses):
+                    commit_msg = c.get("message") or c.get("commit", {}).get("message", "Contributed code")
+                    code_changes = []
+                    
+                    if not isinstance(res, Exception) and res.status_code == 200:
+                        files = res.json().get("files", [])
+                        for f in files:
+                            filename = f.get("filename")
+                            patch = f.get("patch")
+                            if filename and patch:
+                                clean_patch = patch.replace('\n', '\n        ')
+                                code_changes.append(f"File: {filename}\n        Code Diffs:\n        {clean_patch}")
+                                
+                    contributions.append({
+                        "message": commit_msg.strip(),
+                        "code_diffs": code_changes
+                    })
+            else:
+                for c in commits[:2]:
+                    commit_msg = c.get("message") or c.get("commit", {}).get("message", "Contributed code")
+                    contributions.append({"message": commit_msg.strip(), "code_diffs": []})
+                    
+            return contributions if contributions else [{"message": "Contributed code to this repository", "code_diffs": []}]
+        except:
+            return [{"message": "Contributed code to this repository", "code_diffs": []}]
+
+    async def fetch_repo_context(self, client: httpx.AsyncClient, owner: str, repo: str, default_branch: str = "main") -> dict:
         context = {"languages": {}, "file_tree": [], "dependencies": [], "source_code": []}
-        
-        # Skip deep context fetch if rate limit is too low
         if not self._has_rate_budget(5):
-            print(f"Skipping deep context fetch for {owner}/{repo} — rate limit budget low")
             return context
             
         try:
-            # 1. Language breakdown (bytes per language)
+            # Fetch languages and recursive file tree concurrently!
             lang_url = f"https://api.github.com/repos/{owner}/{repo}/languages"
-            lang_res = self._safe_get(lang_url)
-            if lang_res.status_code == 200:
-                context["languages"] = lang_res.json()
-            
-            # 2. Recursive tree listing (project structure & source files)
             tree_url = f"https://api.github.com/repos/{owner}/{repo}/git/trees/{default_branch}?recursive=1"
-            tree_res = self._safe_get(tree_url)
-            if tree_res.status_code == 200:
-                items = tree_res.json().get("tree", [])
+            
+            res_lang, res_tree = await asyncio.gather(
+                self._safe_get(client, lang_url),
+                self._safe_get(client, tree_url),
+                return_exceptions=True
+            )
+            
+            if not isinstance(res_lang, Exception) and res_lang.status_code == 200:
+                context["languages"] = res_lang.json()
                 
-                # File tree: limit to top level or interesting dirs
-                context["file_tree"] = [item["path"] for item in items if "/" not in item["path"] or item["path"].startswith("src/")]
+            if isinstance(res_tree, Exception) or res_tree.status_code != 200:
+                return context
                 
-                # 3. Fetch dependencies and source code
-                dep_files = ["package.json", "requirements.txt", "Pipfile", "pyproject.toml"]
-                source_exts = (".py", ".ts", ".tsx", ".js", ".jsx", ".go", ".rs", ".java", ".cpp", ".c", ".h")
+            items = res_tree.json().get("tree", [])
+            context["file_tree"] = [item["path"] for item in items if "/" not in item["path"] or item["path"].startswith("src/")]
+            
+            dep_files = {"package.json", "requirements.txt", "Pipfile", "pyproject.toml"}
+            source_exts = (".py", ".ts", ".tsx", ".js", ".jsx", ".go", ".rs", ".java", ".cpp", ".c", ".h")
+            
+            dep_tasks = []
+            source_candidates = []
+            
+            for item in items:
+                path = item["path"]
+                if item["type"] == "blob":
+                    fname = path.split("/")[-1]
+                    if fname in dep_files:
+                        raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{default_branch}/{path}"
+                        dep_tasks.append((fname, client.get(raw_url, timeout=5)))
+                    if fname.endswith(source_exts) and "test" not in path.lower() and "node_modules" not in path.lower():
+                        source_candidates.append(path)
+            
+            # Fetch all dependency files concurrently!
+            if dep_tasks:
+                fnames = [t[0] for t in dep_tasks]
+                tasks = [t[1] for t in dep_tasks]
+                dep_responses = await asyncio.gather(*tasks, return_exceptions=True)
                 
-                source_candidates = []
-                
-                for item in items:
-                    path = item["path"]
-                    if item["type"] == "blob":
-                        # Fetch dependencies
-                        fname = path.split("/")[-1]
-                        if fname in dep_files:
+                for fname, res in zip(fnames, dep_responses):
+                    if not isinstance(res, Exception) and res.status_code == 200:
+                        if fname == "package.json":
+                            import json
                             try:
-                                raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{default_branch}/{path}"
-                                dep_res = requests.get(raw_url, timeout=5)
-                                if dep_res.status_code == 200:
-                                    if fname == "package.json":
-                                        import json
-                                        try:
-                                            pkg = json.loads(dep_res.text)
-                                            all_deps = list((pkg.get("dependencies") or {}).keys()) + list((pkg.get("devDependencies") or {}).keys())
-                                            context["dependencies"].extend(all_deps)
-                                        except:
-                                            pass
-                                    elif fname == "requirements.txt":
-                                        lines = dep_res.text.strip().split("\n")
-                                        for line in lines:
-                                            line = line.strip()
-                                            if line and not line.startswith("#"):
-                                                pkg_name = line.split("==")[0].split(">=")[0].split("<=")[0].split("~=")[0].strip()
-                                                if pkg_name:
-                                                    context["dependencies"].append(pkg_name)
+                                pkg = json.loads(res.text)
+                                all_deps = list((pkg.get("dependencies") or {}).keys()) + list((pkg.get("devDependencies") or {}).keys())
+                                context["dependencies"].extend(all_deps)
                             except:
                                 pass
-                        
-                        # Collect source candidates
-                        if fname.endswith(source_exts) and "test" not in path.lower() and "node_modules" not in path.lower():
-                            source_candidates.append(path)
+                        elif fname == "requirements.txt":
+                            lines = res.text.strip().split("\n")
+                            for line in lines:
+                                line = line.strip()
+                                if line and not line.startswith("#"):
+                                    pkg_name = line.split("==")[0].split(">=")[0].split("<=")[0].split("~=")[0].strip()
+                                    if pkg_name:
+                                        context["dependencies"].append(pkg_name)
+                                        
+            # Score and fetch top 2 source candidates concurrently!
+            def score_source(path):
+                score = 0
+                lower_path = path.lower()
+                if "src/" in lower_path or "app/" in lower_path: score += 10
+                if "main" in lower_path or "index" in lower_path or "app" in lower_path: score += 20
+                return score
                 
-                # 4. Fetch up to 2 interesting source files for deep AI analysis
-                # Prioritize 'main', 'app', 'index', or files in 'src'
-                def score_source(path):
-                    score = 0
-                    lower_path = path.lower()
-                    if "src/" in lower_path or "app/" in lower_path: score += 10
-                    if "main" in lower_path or "index" in lower_path or "app" in lower_path: score += 20
-                    return score
+            source_candidates.sort(key=score_source, reverse=True)
+            src_tasks = []
+            
+            for path in source_candidates[:2]:
+                raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{default_branch}/{path}"
+                src_tasks.append((path, client.get(raw_url, timeout=5)))
                 
-                source_candidates.sort(key=score_source, reverse=True)
+            if src_tasks:
+                paths = [t[0] for t in src_tasks]
+                tasks = [t[1] for t in src_tasks]
+                src_responses = await asyncio.gather(*tasks, return_exceptions=True)
                 
-                for path in source_candidates[:2]:
-                    try:
-                        raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{default_branch}/{path}"
-                        src_res = requests.get(raw_url, timeout=5)
-                        if src_res.status_code == 200:
-                            # Truncate source to 1500 chars to avoid exceeding token limits
-                            context["source_code"].append({
-                                "file": path,
-                                "code": src_res.text[:1500]
-                            })
-                    except:
-                        pass
-        except Exception as e:
-            print(f"Failed to fetch repo context for {owner}/{repo}: {e}")
-        
+                for path, res in zip(paths, src_responses):
+                    if not isinstance(res, Exception) and res.status_code == 200:
+                        context["source_code"].append({
+                            "file": path,
+                            "code": res.text[:1500]
+                        })
+        except:
+            pass
         return context
 
-    def analyze_profile(self, username: str) -> Dict[str, Any]:
+    async def analyze_profile(self, username: str) -> Dict[str, Any]:
         """
-        Aggregates and synthesizes languages, repos, stars, and skill lists.
-        Falls back to high-fidelity synthetic mock data if fetching fails and no PAT is provided.
+        Main high-performance async profile analyzer.
+        Uses in-memory cache and GraphQL.
         """
+        # 1. In-memory Caching Check
+        cache_key = f"github_analysis_{username}"
+        cached_data = GitHubCache.get(cache_key)
+        if cached_data:
+            print(f"Universal Cache: Serving cached GitHub analysis for user '{username}'")
+            return cached_data
+            
         try:
-            raw_data = self.fetch_user_data(username)
+            # 2. Fetch Base User Data
+            if self.token:
+                print(f"Universal Scraper: Pulling '{username}' via high-performance GraphQL API")
+                raw_data = await self.fetch_user_data_graphql(username)
+            else:
+                print(f"Universal Scraper: Pulling '{username}' via REST fallback")
+                async with httpx.AsyncClient() as client:
+                    raw_data = await self.fetch_user_data_rest(client, username)
+                    
             profile = raw_data["profile"]
-            # Exclude forked repositories right at the entrance!
             repos = [r for r in raw_data["repositories"] if not r.get("fork", False)]
         except Exception as e:
-            # If the user did not provide a PAT and it failed, gracefully fallback to high-fidelity mock profile
             if not self.token:
                 print(f"Scraping without token failed for '{username}'. Falling back to high-fidelity synthetic mock data: {e}")
-                return self.get_mock_analysis(username)
-            
-            # If they did provide a token, propagate the error (so they know if the token is invalid/expired)
+                fallback_data = self.get_mock_analysis(username)
+                GitHubCache.set(cache_key, fallback_data)
+                return fallback_data
             if username.lower() in ["demo", "test"]:
-                print(f"Using demo mode for {username}")
                 return self.get_mock_analysis(username)
             raise e
 
-        # 1. Total stats
+        # 3. Analyze base stats
         total_repos = len(repos)
         stars_count = sum(repo.get("stargazers_count", 0) for repo in repos)
         forks_count = sum(repo.get("forks_count", 0) for repo in repos)
         
-        # 2. Languages distribution
         languages_dict = {}
         for repo in repos:
             lang = repo.get("language")
@@ -300,61 +429,76 @@ class GitHubAnalyzer:
                 for lang, count in sorted(languages_dict.items(), key=lambda x: x[1], reverse=True)
             ]
 
-        # 3. Top projects (Filtered to include only repositories with active candidate commits)
-        sorted_repos = sorted(repos, key=lambda x: x.get("stargazers_count", 0), reverse=True)
+        # 4. Asynchronously fetch deep info for top 7 projects concurrently!
         top_projects = []
-        for repo in sorted_repos:
-            if len(top_projects) >= 5:
-                break
+        sorted_repos = sorted(repos, key=lambda x: x.get("stargazers_count", 0), reverse=True)[:7]
+        
+        async with httpx.AsyncClient() as client:
+            project_tasks = []
+            for repo in sorted_repos:
+                owner = profile.get("login") or username
+                name = repo.get("name")
+                default_branch = repo.get("default_branch", "main")
+                preloaded = repo.get("preloaded_commits")
                 
-            owner = repo.get("owner", {}).get("login")
-            name = repo.get("name")
-            
-            # Fetch user commits first to verify active participation
-            commits = self.fetch_user_commits(owner, name, username)
-            
-            # Skip repository if the candidate has 0 commits to it (ensures zero contribution repos are ignored)
-            if not commits:
-                continue
+                # Create concurrent async fetchers for each repository's deep details
+                async def fetch_all_repo_data(r=repo, o=owner, n=name, db=default_branch, p=preloaded):
+                    commits = await self.fetch_user_commits(client, o, n, username, preloaded=p)
+                    if not commits:
+                        return None
+                    readme = await self.fetch_repo_readme(client, o, n)
+                    context = await self.fetch_repo_context(client, o, n, db)
+                    return {
+                        "repo": r,
+                        "commits": commits,
+                        "readme": readme,
+                        "context": context
+                    }
+                project_tasks.append(fetch_all_repo_data())
                 
-            desc = repo.get("description") or ""
+            project_results = await asyncio.gather(*project_tasks, return_exceptions=True)
             
-            # Fetch deep code context: README, languages, file tree, dependencies, source code
-            # Skip deep analysis if rate budget is running low
-            default_branch = repo.get("default_branch", "main")
-            readme_content = self.fetch_repo_readme(owner, name)
-            repo_context = self.fetch_repo_context(owner, name, default_branch)
-            
-            top_projects.append({
-                "name": name,
-                "description": desc,
-                "stars": repo.get("stargazers_count", 0),
-                "forks": repo.get("forks_count", 0),
-                "url": repo.get("html_url"),
-                "language": repo.get("language") or "Other",
-                "topics": repo.get("topics", []),
-                "commits": commits,
-                "readme": readme_content,
-                "repo_languages": repo_context.get("languages", {}),
-                "file_tree": repo_context.get("file_tree", []),
-                "dependencies": repo_context.get("dependencies", []),
-                "source_code": repo_context.get("source_code", [])
-            })
+            for res in project_results:
+                if res and not isinstance(res, Exception):
+                    repo = res["repo"]
+                    top_projects.append({
+                        "name": repo.get("name"),
+                        "description": repo.get("description") or "",
+                        "stars": repo.get("stargazers_count", 0),
+                        "forks": repo.get("forks_count", 0),
+                        "url": repo.get("html_url"),
+                        "language": repo.get("language") or "Other",
+                        "topics": repo.get("topics", []),
+                        "commits": res["commits"],
+                        "readme": res["readme"],
+                        "repo_languages": res["context"].get("languages", {}),
+                        "file_tree": res["context"].get("file_tree", []),
+                        "dependencies": res["context"].get("dependencies", []),
+                        "source_code": res["context"].get("source_code", [])
+                    })
 
-        # 4. Detected Skills
+        # 5. HIGH PERFORMANCE Set-Based Keyword Skill Matching (Fixes O(N) list searches)
         detected_languages = list(languages_dict.keys())
         detected_frameworks = []
         detected_tools = ["Git", "GitHub Actions"]
-
-        # Basic scanning for topics/keywords across all repos
-        all_topics = []
-        for repo in repos:
-            all_topics.extend(repo.get("topics", []))
-            
-        topics_lower = [t.lower() for t in all_topics]
-        names_lower = [repo.get("name", "").lower() for repo in repos]
-        descs_lower = [repo.get("description", "").lower() for repo in repos if repo.get("description")]
         
+        # Populate all text tokens into a single pre-compiled word lookup set
+        lookup_words = set()
+        for repo in repos:
+            # 1. Topics
+            for t in repo.get("topics", []):
+                lookup_words.add(t.lower())
+            # 2. Repo Names
+            name = repo.get("name", "").lower()
+            lookup_words.add(name)
+            lookup_words.update(name.split("-"))
+            lookup_words.update(name.split("_"))
+            # 3. Descriptions
+            desc = repo.get("description")
+            if desc:
+                clean_desc = desc.lower().replace('.', ' ').replace(',', ' ').replace(';', ' ')
+                lookup_words.update(clean_desc.split())
+                
         framework_keywords = {
             "react": "React", "nextjs": "Next.js", "next.js": "Next.js", "vue": "Vue.js", "angular": "Angular",
             "fastapi": "FastAPI", "flask": "Flask", "django": "Django", "express": "Express.js",
@@ -372,28 +516,16 @@ class GitHubAnalyzer:
             "convex": "Convex", "prisma": "Prisma", "graphql": "GraphQL"
         }
         
-        def has_keyword(kw):
-            if kw in topics_lower:
-                return True
-            for n in names_lower:
-                if kw in n:
-                    return True
-            for d in descs_lower:
-                # Pad description with spaces for safe word-boundary matching
-                padded = f" {d.replace('.', ' ').replace(',', ' ').replace(';', ' ')} "
-                if f" {kw} " in padded:
-                    return True
-            return False
-        
+        # O(1) set-lookup for every keyword
         for k, v in framework_keywords.items():
-            if has_keyword(k) and v not in detected_frameworks:
+            if k in lookup_words and v not in detected_frameworks:
                 detected_frameworks.append(v)
                 
         for k, v in tool_keywords.items():
-            if has_keyword(k) and v not in detected_tools:
+            if k in lookup_words and v not in detected_tools:
                 detected_tools.append(v)
-
-        return {
+                
+        analysis_result = {
             "name": profile.get("name") or username,
             "username": username,
             "avatar_url": profile.get("avatar_url"),
@@ -411,82 +543,118 @@ class GitHubAnalyzer:
                 "tools": detected_tools
             }
         }
+        
+        # Cache the result before returning
+        GitHubCache.set(cache_key, analysis_result)
+        return analysis_result
 
     def get_mock_analysis(self, username: str) -> Dict[str, Any]:
-        """
-        Fallback mock data generator for seamless API experience.
-        """
+        """Fallback mock data generator for seamless API experience."""
         return {
             "name": f"{username}",
             "username": username,
             "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
             "bio": "",
             "email": f"{username}@github.com",
-            "public_repos": 3,
-            "followers": 0,
-            "total_stars": 0,
-            "total_forks": 0,
+            "public_repos": 7,
+            "followers": 12,
+            "total_stars": 34,
+            "total_forks": 15,
             "languages": [
-                {"name": "Python", "count": 8, "percentage": 57.1},
-                {"name": "TypeScript", "count": 4, "percentage": 28.6},
-                {"name": "HTML/CSS", "count": 2, "percentage": 14.3}
+                {"name": "TypeScript", "count": 12, "percentage": 42.8},
+                {"name": "Python", "count": 10, "percentage": 35.7},
+                {"name": "JavaScript", "count": 4, "percentage": 14.3},
+                {"name": "CSS", "count": 2, "percentage": 7.2}
             ],
             "top_projects": [
                 {
-                    "name": "aeon-planner",
+                    "name": "AEON",
                     "description": "An AI-powered daily study-planner and roadmap manager with RPG game elements.",
-                    "stars": 0,
-                    "forks": 0,
-                    "url": f"https://github.com/{username}/aeon-planner",
+                    "stars": 15,
+                    "forks": 4,
+                    "url": f"https://github.com/{username}/AEON",
                     "language": "TypeScript",
                     "topics": ["react", "convex", "typescript", "rpg", "planner"],
                     "commits": [
-                        {
-                            "message": "feat: implement Convex sync hooks and real-time state synchronization",
-                            "code_diffs": [
-                                "File: src/hooks/useConvexSync.ts\n        Code Diffs:\n        + export const useConvexSync = (taskId: string) => {\n        +   const mutate = useMutation(api.tasks.updateState);\n        +   useEffect(() => {\n        +     mutate({ id: taskId, status: 'completed' });\n        +   }, [taskId]);\n        + };"
-                            ]
-                        }
+                        {"message": "feat: implement Convex sync hooks and real-time state synchronization", "code_diffs": []}
                     ]
                 },
                 {
-                    "name": "contest-fetcher-api",
-                    "description": "High performance server-side contest scraper proxy supporting multi-platform caching.",
-                    "stars": 0,
-                    "forks": 0,
-                    "url": f"https://github.com/{username}/contest-fetcher-api",
+                    "name": "ai-ecg",
+                    "description": "Machine learning model to detect anomalies in real-time electrocardiogram signals.",
+                    "stars": 8,
+                    "forks": 2,
+                    "url": f"https://github.com/{username}/ai-ecg",
                     "language": "Python",
-                    "topics": ["python", "fastapi", "web-scraper", "redis"],
+                    "topics": ["pytorch", "machine-learning", "signal-processing", "python"],
                     "commits": [
-                        {
-                            "message": "feat: implement direct contest fetching bypassing kontests.net aggregator",
-                            "code_diffs": [
-                                "File: app/fetcher.py\n        Code Diffs:\n        + def fetch_direct_contests():\n        +   res = requests.get('https://codeforces.com/api/contest.list', headers={'User-Agent': 'Mozilla/5.0'})\n        +   return parse_codeforces(res.json())\n        -   # Deprecated: return requests.get('https://kontests.net/api/v1/all')"
-                            ]
-                        }
+                        {"message": "feat: optimize LSTM layer parameters for low latency classification", "code_diffs": []}
                     ]
                 },
                 {
-                    "name": "git-resume-generator",
+                    "name": "GitResume",
                     "description": "Synthesize ATS-friendly Overleaf resume templates straight from public GitHub histories.",
-                    "stars": 0,
-                    "forks": 0,
-                    "url": f"https://github.com/{username}/git-resume-generator",
-                    "language": "Python",
-                    "topics": ["python", "jinja2", "latex", "openai"],
+                    "stars": 5,
+                    "forks": 1,
+                    "url": f"https://github.com/{username}/GitResume",
+                    "language": "TypeScript",
+                    "topics": ["react", "typescript", "fastapi", "resume-builder"],
                     "commits": [
-                        {
-                            "message": "feat: migrate OpenAI package initialization to direct REST calls to bypass httpx clashes",
-                            "code_diffs": [
-                                "File: app/ai_generator.py\n        Code Diffs:\n        + payload = {'model': self.model, 'messages': [{'role': 'user', 'content': prompt}]}\n        + res = requests.post('https://api.groq.com/openai/v1/chat/completions', headers=self.headers, json=payload)\n        - self.client = OpenAI(api_key=self.api_key)"
-                            ]
-                        }
+                        {"message": "feat: migrate backend APIs to high performance async/await operations", "code_diffs": []}
+                    ]
+                },
+                {
+                    "name": "KernelScope",
+                    "description": "Dynamic visualizer tool for custom Linux kernel parameters and modules.",
+                    "stars": 4,
+                    "forks": 1,
+                    "url": f"https://github.com/{username}/KernelScope",
+                    "language": "Python",
+                    "topics": ["python", "kernel", "visualizer", "linux"],
+                    "commits": [
+                        {"message": "feat: add support for dynamic module inspection hooks", "code_diffs": []}
+                    ]
+                },
+                {
+                    "name": "MoodCode",
+                    "description": "Real-time IDE extension to track developer emotional states and suggest coding breaks.",
+                    "stars": 3,
+                    "forks": 0,
+                    "url": f"https://github.com/{username}/MoodCode",
+                    "language": "TypeScript",
+                    "topics": ["vscode-extension", "ai", "emotion-tracking"],
+                    "commits": [
+                        {"message": "feat: add telemetry mapping for visual indicators", "code_diffs": []}
+                    ]
+                },
+                {
+                    "name": "AEON-Mobile",
+                    "description": "Mobile client application companion for the AEON Goal Planner workspace.",
+                    "stars": 2,
+                    "forks": 0,
+                    "url": f"https://github.com/{username}/AEON-Mobile",
+                    "language": "TypeScript",
+                    "topics": ["react-native", "ios", "android", "mobile-planner"],
+                    "commits": [
+                        {"message": "feat: integrate offline persistence caches", "code_diffs": []}
+                    ]
+                },
+                {
+                    "name": "AutoDoc",
+                    "description": "Automated code document generator using local language models and ast trees.",
+                    "stars": 1,
+                    "forks": 0,
+                    "url": f"https://github.com/{username}/AutoDoc",
+                    "language": "Python",
+                    "topics": ["python", "documentation", "ast", "llm"],
+                    "commits": [
+                        {"message": "feat: add custom template support for markdown files", "code_diffs": []}
                     ]
                 }
             ],
             "detected_skills": {
-                "languages": ["Python", "TypeScript", "JavaScript", "HTML", "CSS"],
-                "frameworks": ["React", "FastAPI", "Next.js", "Express.js"],
-                "tools": ["Git", "GitHub Actions", "Docker", "PostgreSQL", "Convex", "Redis"]
+                "languages": ["Python", "TypeScript", "JavaScript", "CSS"],
+                "frameworks": ["React", "FastAPI", "Next.js", "React Native", "PyTorch"],
+                "tools": ["Git", "GitHub Actions", "Docker", "PostgreSQL", "Convex"]
             }
         }

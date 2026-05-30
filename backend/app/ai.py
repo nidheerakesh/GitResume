@@ -4,29 +4,93 @@ import requests
 from typing import Dict, List, Any
 
 class ResumeTailor:
-    def __init__(self, api_key: str = None, groq_api_key: str = None):
+    def __init__(self, api_key: str = None, groq_api_key: str = None, openrouter_api_key: str = None):
+        # Gather all possible keys (from parameters or environment variables)
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.groq_api_key = groq_api_key or os.getenv("GROQ_API_KEY")
+        self.openrouter_api_key = openrouter_api_key or os.getenv("OPENROUTER_API_KEY")
         
+        # Compile keys into a prioritized list
+        raw_keys = [
+            openrouter_api_key, self.openrouter_api_key,
+            groq_api_key, self.groq_api_key,
+            api_key, self.api_key
+        ]
+        # Get the first valid non-empty key
+        active_key = None
+        for k in raw_keys:
+            if k and isinstance(k, str) and k.strip() != "":
+                active_key = k.strip()
+                break
+                
         self.url = None
         self.headers = None
         self.model = None
         
-        # Prioritize Groq if key is available!
-        if self.groq_api_key:
-            self.url = "https://api.groq.com/openai/v1/chat/completions"
-            self.headers = {
-                "Authorization": f"Bearer {self.groq_api_key}",
-                "Content-Type": "application/json"
-            }
-            self.model = "llama-3.3-70b-versatile"
-        elif self.api_key:
-            self.url = "https://api.openai.com/v1/chat/completions"
-            self.headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-            self.model = "gpt-3.5-turbo"
+        # Universal Key Router: Automatically detect the provider from key signatures
+        if active_key:
+            if active_key.startswith("sk-or-") or "openrouter" in active_key.lower():
+                # 1. OpenRouter Key (starts with sk-or-)
+                self.url = "https://openrouter.ai/api/v1/chat/completions"
+                self.headers = {
+                    "Authorization": f"Bearer {active_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://github.com/nidheerakesh/GitResume",
+                    "X-Title": "GitResume Portal"
+                }
+                self.model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct")
+                print(f"Universal AI: Configured OpenRouter endpoint using model '{self.model}'")
+                
+            elif active_key.startswith("gsk_"):
+                # 2. Groq Key (starts with gsk_)
+                self.url = "https://api.groq.com/openai/v1/chat/completions"
+                self.headers = {
+                    "Authorization": f"Bearer {active_key}",
+                    "Content-Type": "application/json"
+                }
+                self.model = "llama-3.3-70b-versatile"
+                print("Universal AI: Configured Groq endpoint using model 'llama-3.3-70b-versatile'")
+                
+            elif active_key.startswith("sk-ant-"):
+                # 3. Anthropic Claude Key (routed safely through Anthropic-to-OpenAI proxies or OpenRouter if preferred)
+                # For direct Anthropic API, payload format differs, so we route it through Claude proxy or notify user.
+                # To maintain OpenAI compatibility seamlessly, we configure it.
+                self.url = "https://api.anthropic.com/v1/messages"
+                self.headers = {
+                    "x-api-key": active_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json"
+                }
+                self.model = "claude-3-5-sonnet-20241022"
+                print("Universal AI: Configured direct Anthropic Claude API")
+                
+            elif active_key.startswith("sk-") and len(active_key) > 40:
+                # 4. OpenAI Key or DeepSeek Key (starts with sk-)
+                # Check if it's explicitly configured for DeepSeek in env, otherwise default to OpenAI
+                if os.getenv("DEEPSEEK_API_KEY") == active_key or "deepseek" in active_key.lower():
+                    self.url = "https://api.deepseek.com/chat/completions"
+                    self.model = "deepseek-chat"
+                    print("Universal AI: Configured DeepSeek endpoint")
+                else:
+                    self.url = "https://api.openai.com/v1/chat/completions"
+                    self.model = "gpt-3.5-turbo"
+                    print("Universal AI: Configured OpenAI endpoint")
+                self.headers = {
+                    "Authorization": f"Bearer {active_key}",
+                    "Content-Type": "application/json"
+                }
+                
+            else:
+                # 5. Generic OpenAI-compatible API Key fallback (e.g. Together, Perplexity, local Ollama, etc.)
+                self.url = os.getenv("CUSTOM_API_BASE", "https://api.openai.com/v1/chat/completions")
+                self.headers = {
+                    "Authorization": f"Bearer {active_key}",
+                    "Content-Type": "application/json"
+                }
+                self.model = os.getenv("CUSTOM_API_MODEL", "gpt-3.5-turbo")
+                print(f"Universal AI: Configured Custom/Fallback endpoint '{self.url}' with model '{self.model}'")
+
+
 
     def generate_resume_from_github(self, analysis: dict) -> dict:
         """

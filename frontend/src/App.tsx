@@ -215,6 +215,7 @@ function App() {
 
   // Resume Import & Resource Aggregator States
   const [loadedGitHubData, setLoadedGitHubData] = useState<any>(null);
+  const [selectedRepos, setSelectedRepos] = useState<string[]>([]);
   const [loadedPdfText, setLoadedPdfText] = useState<string>('');
   const [loadedPdfFilename, setLoadedPdfFilename] = useState<string>('');
   const [loadedLinkedinText, setLoadedLinkedinText] = useState<string>('');
@@ -329,6 +330,7 @@ function App() {
       }
       const githubAnalysis = await res.json();
       setLoadedGitHubData(githubAnalysis);
+      setSelectedRepos((githubAnalysis.top_projects || []).map((p: any) => p.name));
       alert('GitHub repositories successfully scanned & loaded into active session!');
     } catch (err: any) {
       console.error(err);
@@ -421,11 +423,19 @@ function App() {
     setIsSynthesizing(true);
     setErrorMsg('');
     try {
+      let githubPayload = undefined;
+      if (loadedGitHubData) {
+        githubPayload = {
+          ...loadedGitHubData,
+          top_projects: (loadedGitHubData.top_projects || []).filter((p: any) => selectedRepos.includes(p.name))
+        };
+      }
+
       const res = await fetch(`${API_BASE_URL}/resume/synthesize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          github_data: loadedGitHubData || undefined,
+          github_data: githubPayload,
           pdf_text: loadedPdfText || undefined,
           linkedin_text: loadedLinkedinText || undefined,
           groq_api_key: groqKey.trim() || undefined
@@ -778,11 +788,11 @@ function App() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Groq API Key </label>
+                <label className="form-label">Groq or OpenRouter API Key </label>
                 <input 
                   type="password" 
                   className="form-control" 
-                  placeholder="Paste Groq API Key to enable ultra-fast Llama-3 AI generation"
+                  placeholder="Paste Groq or OpenRouter (sk-or-...) key to enable elite Llama/Gemini AI generation"
                   value={groqKey}
                   onChange={(e) => setGroqKey(e.target.value)}
                 />
@@ -878,126 +888,224 @@ function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2.5rem' }}>
                 
                 {/* 1. GENERATE FROM GITHUB */}
-                <div style={{ background: 'rgba(255,255,255,0.02)', border: loadedGitHubData ? '1px solid rgba(10, 185, 129, 0.4)' : '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem', transition: 'all 0.3s ease' }}>
-                  <div style={{ background: loadedGitHubData ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)', borderRadius: 'var(--radius-md)', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <FolderGit2 size={28} style={{ color: loadedGitHubData ? '#10b981' : 'var(--primary)' }} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)' }}>GitHub Repository Scraper</h4>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.45', marginTop: '0.25rem', marginBottom: 0 }}>
-                      Analyze coding history, detect frameworks, and parse repository description files to capture project technical depth.
-                    </p>
-                    {loadedGitHubData ? (
-                      <div style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'bold', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        ✓ Connected as @{loadedGitHubData.username || username} ({loadedGitHubData.top_projects?.length || 0} projects found)
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                        {token.trim() ? 'Token active — scanning public & private repos.' : 'Public repos only. Provide a PAT on the login screen for private repos.'}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
-                    <button className="btn btn-primary" style={{ padding: '0.65rem 1.5rem' }} onClick={handleScrapeGitHub} disabled={isLoading}>
-                      {isLoading ? (
-                        <>
-                          <RefreshCw className="animate-spin" size={14} /> Scanning...
-                        </>
-                      ) : loadedGitHubData ? (
-                        "Rescan GitHub"
+                {/* 1. GENERATE FROM GITHUB */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: loadedGitHubData ? '1px solid rgba(10, 185, 129, 0.4)' : '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'all 0.3s ease' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', width: '100%', flexWrap: 'wrap' }}>
+                    <div style={{ background: loadedGitHubData ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)', borderRadius: 'var(--radius-md)', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <FolderGit2 size={28} style={{ color: loadedGitHubData ? '#10b981' : 'var(--primary)' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: '200px' }}>
+                      <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)' }}>GitHub Repository Scraper</h4>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.45', marginTop: '0.25rem', marginBottom: 0 }}>
+                        Analyze coding history, detect frameworks, and parse repository description files to capture project technical depth.
+                      </p>
+                      {loadedGitHubData ? (
+                        <div style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'bold', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          ✓ Connected as @{loadedGitHubData.username || username} ({loadedGitHubData.top_projects?.length || 0} projects found)
+                        </div>
                       ) : (
-                        "Scrape GitHub"
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                          {token.trim() ? 'Token active — scanning public & private repos.' : 'Public repos only. Provide a PAT on the login screen for private repos.'}
+                        </div>
                       )}
-                    </button>
-                    {loadedGitHubData && (
-                      <button 
-                        className="btn btn-secondary btn-sm" 
-                        style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', borderColor: 'rgba(255,255,255,0.1)' }}
-                        onClick={async () => {
-                          // Generate a full resume from GitHub data via the AI backend
-                          setIsLoading(true);
-                          setErrorMsg('');
-                          try {
-                            const skills = loadedGitHubData.detected_skills || { languages: [], frameworks: [], tools: [] };
-                            const res = await fetch(`${API_BASE_URL}/resume/generate`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                name: loadedGitHubData.name || loadedGitHubData.username || '',
-                                email: loadedGitHubData.email || '',
-                                phone: '',
-                                linkedin: '',
-                                github: loadedGitHubData.username || '',
-                                bio: loadedGitHubData.bio || '',
-                                skills: skills,
-                                top_projects: loadedGitHubData.top_projects || [],
-                                groq_api_key: groqKey.trim() || undefined
-                              })
-                            });
-
-                            if (res.ok) {
-                              const generatedResume = await res.json();
-                              setResumeData(generatedResume);
-                            } else {
-                              // Fallback: manually convert GitHub data into resume format locally
-                              const topProjects = (loadedGitHubData.top_projects || []).slice(0, 5);
-                              const convertedProjects = topProjects.map((p: any) => ({
-                                name: p.name || 'Project',
-                                tech: [p.language, ...(p.topics || [])].filter(Boolean).slice(0, 5),
-                                start_date: '',
-                                end_date: 'Present',
-                                url: p.url || '',
-                                bullets: (p.commits || []).slice(0, 3).map((c: any) =>
-                                  typeof c === 'string' ? c : (c.message || 'Contributed to this project')
-                                ).filter(Boolean),
-                                hidden: false
-                              }));
-
-                              // Ensure each project has at least one bullet
-                              convertedProjects.forEach((p: any) => {
-                                if (p.bullets.length === 0) {
-                                  p.bullets = [topProjects.find((tp: any) => tp.name === p.name)?.description || 'Developed and maintained this project.'];
-                                }
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end', minWidth: '150px' }}>
+                      <button className="btn btn-primary" style={{ padding: '0.65rem 1.5rem', width: '100%' }} onClick={handleScrapeGitHub} disabled={isLoading}>
+                        {isLoading ? (
+                          <>
+                            <RefreshCw className="animate-spin" size={14} /> Scanning...
+                          </>
+                        ) : loadedGitHubData ? (
+                          "Rescan GitHub"
+                        ) : (
+                          "Scrape GitHub"
+                        )}
+                      </button>
+                      {loadedGitHubData && (
+                        <button 
+                          className="btn btn-secondary btn-sm" 
+                          style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', borderColor: 'rgba(255,255,255,0.1)', width: '100%' }}
+                          onClick={async () => {
+                            const filteredProjects = (loadedGitHubData.top_projects || []).filter(
+                              (p: any) => selectedRepos.includes(p.name)
+                            );
+                            if (filteredProjects.length === 0) {
+                              alert("Please select at least 1 repository to include!");
+                              return;
+                            }
+                            // Generate a full resume from GitHub data via the AI backend
+                            setIsLoading(true);
+                            setErrorMsg('');
+                            try {
+                              const skills = loadedGitHubData.detected_skills || { languages: [], frameworks: [], tools: [] };
+                              const res = await fetch(`${API_BASE_URL}/resume/generate`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  name: loadedGitHubData.name || loadedGitHubData.username || '',
+                                  email: loadedGitHubData.email || '',
+                                  phone: '',
+                                  linkedin: '',
+                                  github: loadedGitHubData.username || '',
+                                  bio: loadedGitHubData.bio || '',
+                                  skills: skills,
+                                  top_projects: filteredProjects,
+                                  groq_api_key: groqKey.trim() || undefined
+                                })
                               });
 
-                              const langStr = (skills.languages || []).slice(0, 3).join(', ');
-                              const projNames = convertedProjects.slice(0, 2).map((p: any) => p.name).join(' and ');
+                              if (res.ok) {
+                                const generatedResume = await res.json();
+                                setResumeData(generatedResume);
+                              } else {
+                                // Fallback: manually convert GitHub data into resume format locally
+                                const convertedProjects = filteredProjects.map((p: any) => ({
+                                  name: p.name || 'Project',
+                                  tech: [p.language, ...(p.topics || [])].filter(Boolean).slice(0, 5),
+                                  start_date: '',
+                                  end_date: 'Present',
+                                  url: p.url || '',
+                                  bullets: (p.commits || []).slice(0, 3).map((c: any) =>
+                                    typeof c === 'string' ? c : (c.message || 'Contributed to this project')
+                                  ).filter(Boolean),
+                                  hidden: false
+                                }));
 
-                              setResumeData({
-                                name: loadedGitHubData.name || '',
-                                email: loadedGitHubData.email || '',
-                                phone: '',
-                                linkedin: '',
-                                github: loadedGitHubData.username ? `https://github.com/${loadedGitHubData.username}` : '',
-                                course: '',
-                                roll: '',
-                                website: '',
-                                summary: `Software developer with hands-on experience in ${langStr || 'multiple technologies'}. Active open-source contributor maintaining ${loadedGitHubData.public_repos || 0} repositories on GitHub${projNames ? `, including ${projNames}` : ''}.`,
-                                skills: skills,
-                                projects: convertedProjects,
-                                experience: [],
-                                education: [],
-                                achievements: loadedGitHubData.public_repos > 0 ? [{
-                                  title: 'Open Source Contributor',
-                                  description: `Maintained ${loadedGitHubData.public_repos} public repositories on GitHub with ${loadedGitHubData.total_stars || 0} stars`,
-                                  year: new Date().getFullYear().toString()
-                                }] : [],
-                                coursework: { cs: '', math: '' },
-                                positions: []
-                              } as any);
+                                // Ensure each project has at least one bullet
+                                convertedProjects.forEach((p: any) => {
+                                  if (p.bullets.length === 0) {
+                                    p.bullets = [filteredProjects.find((tp: any) => tp.name === p.name)?.description || 'Developed and maintained this project.'];
+                                  }
+                                });
+
+                                const langStr = (skills.languages || []).slice(0, 3).join(', ');
+                                const projNames = convertedProjects.slice(0, 2).map((p: any) => p.name).join(' and ');
+
+                                setResumeData({
+                                  name: loadedGitHubData.name || '',
+                                  email: loadedGitHubData.email || '',
+                                  phone: '',
+                                  linkedin: '',
+                                  github: loadedGitHubData.username ? `https://github.com/${loadedGitHubData.username}` : '',
+                                  course: '',
+                                  roll: '',
+                                  website: '',
+                                  summary: `Software developer with hands-on experience in ${langStr || 'multiple technologies'}. Active open-source contributor maintaining ${loadedGitHubData.public_repos || 0} repositories on GitHub${projNames ? `, including ${projNames}` : ''}.`,
+                                  skills: skills,
+                                  projects: convertedProjects,
+                                  experience: [],
+                                  education: [],
+                                  achievements: loadedGitHubData.public_repos > 0 ? [{
+                                    title: 'Open Source Contributor',
+                                    description: `Maintained ${loadedGitHubData.public_repos} public repositories on GitHub with ${loadedGitHubData.total_stars || 0} stars`,
+                                    year: new Date().getFullYear().toString()
+                                  }] : [],
+                                  coursework: { cs: '', math: '' },
+                                  positions: []
+                                } as any);
+                              }
+                            } catch (err: any) {
+                              console.error(err);
+                              setErrorMsg(err.message || 'Failed to generate resume from GitHub data.');
+                            } finally {
+                              setIsLoading(false);
                             }
-                          } catch (err: any) {
-                            console.error(err);
-                            setErrorMsg(err.message || 'Failed to generate resume from GitHub data.');
-                          } finally {
-                            setIsLoading(false);
-                          }
-                        }}
-                      >
-                        Use this source alone
-                      </button>
-                    )}
+                          }}
+                        >
+                          Use this source alone
+                        </button>
+                      )}
+                    </div>
                   </div>
+
+                  {/* High Fidelity Collapsible Repository Selection checklist */}
+                  {loadedGitHubData && loadedGitHubData.top_projects && loadedGitHubData.top_projects.length > 0 && (
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem', width: '100%' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          Select repositories to include in your resume:
+                          <span style={{ fontSize: '0.7rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '10px' }}>
+                            {selectedRepos.length} / {loadedGitHubData.top_projects.length} Selected
+                          </span>
+                        </span>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button 
+                            className="btn btn-secondary btn-sm" 
+                            style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderColor: 'rgba(255,255,255,0.05)' }}
+                            onClick={() => setSelectedRepos((loadedGitHubData.top_projects || []).map((p: any) => p.name))}
+                          >
+                            Select All
+                          </button>
+                          <button 
+                            className="btn btn-secondary btn-sm" 
+                            style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderColor: 'rgba(255,255,255,0.05)' }}
+                            onClick={() => setSelectedRepos([])}
+                          >
+                            Clear All
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem', maxHeight: '250px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                        {loadedGitHubData.top_projects.map((repo: any) => {
+                          const isChecked = selectedRepos.includes(repo.name);
+                          return (
+                            <div 
+                              key={repo.name}
+                              onClick={() => {
+                                if (isChecked) {
+                                  setSelectedRepos(selectedRepos.filter(name => name !== repo.name));
+                                } else {
+                                  setSelectedRepos([...selectedRepos, repo.name]);
+                                }
+                              }}
+                              style={{
+                                padding: '0.75rem',
+                                borderRadius: 'var(--radius-sm)',
+                                background: isChecked ? 'rgba(16, 185, 129, 0.04)' : 'rgba(255,255,255,0.01)',
+                                border: isChecked ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255,255,255,0.04)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.25rem',
+                                position: 'relative'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: isChecked ? '#10b981' : 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '80%' }}>
+                                  {repo.name}
+                                </span>
+                                <input 
+                                  type="checkbox" 
+                                  checked={isChecked}
+                                  onChange={() => {}} // handled by parent onClick
+                                  style={{ cursor: 'pointer', accentColor: '#10b981' }} 
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.1rem' }}>
+                                {repo.language && (
+                                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', padding: '0.05rem 0.25rem', borderRadius: '3px' }}>
+                                    {repo.language}
+                                  </span>
+                                )}
+                                {repo.stars > 0 && (
+                                  <span style={{ fontSize: '0.6rem', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.1rem' }}>
+                                    ★ {repo.stars}
+                                  </span>
+                                )}
+                              </div>
+                              {repo.description && (
+                                <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.35', marginTop: '0.25rem' }}>
+                                  {repo.description}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 2. UPLOAD RESUME AS PDF */}
