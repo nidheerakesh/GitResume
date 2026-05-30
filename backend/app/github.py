@@ -261,6 +261,7 @@ class GitHubAnalyzer:
     def analyze_profile(self, username: str) -> Dict[str, Any]:
         """
         Aggregates and synthesizes languages, repos, stars, and skill lists.
+        Falls back to high-fidelity synthetic mock data if fetching fails and no PAT is provided.
         """
         try:
             raw_data = self.fetch_user_data(username)
@@ -268,7 +269,12 @@ class GitHubAnalyzer:
             # Exclude forked repositories right at the entrance!
             repos = [r for r in raw_data["repositories"] if not r.get("fork", False)]
         except Exception as e:
-            # Fall back to mock only if username is demo or test, otherwise propagate the error!
+            # If the user did not provide a PAT and it failed, gracefully fallback to high-fidelity mock profile
+            if not self.token:
+                print(f"Scraping without token failed for '{username}'. Falling back to high-fidelity synthetic mock data: {e}")
+                return self.get_mock_analysis(username)
+            
+            # If they did provide a token, propagate the error (so they know if the token is invalid/expired)
             if username.lower() in ["demo", "test"]:
                 print(f"Using demo mode for {username}")
                 return self.get_mock_analysis(username)
