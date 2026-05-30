@@ -64,6 +64,12 @@ class ChatResumeRequest(BaseModel):
     messages: List[ChatMessage]
     groq_api_key: Optional[str] = None
 
+class SynthesizeResumeRequest(BaseModel):
+    github_data: Optional[Dict[str, Any]] = None
+    pdf_text: Optional[str] = ""
+    linkedin_text: Optional[str] = ""
+    groq_api_key: Optional[str] = None
+
 @app.get("/api/health")
 def health_check():
     return {"status": "healthy", "service": "GitResume API"}
@@ -260,7 +266,10 @@ async def upload_pdf_resume(file: UploadFile = File(...), groq_api_key: str = Fo
         
         tailor = ResumeTailor(groq_api_key=groq_api_key if groq_api_key else None)
         parsed_data = tailor.parse_resume_text(pdf_text)
-        return parsed_data
+        return {
+            "parsed_data": parsed_data,
+            "raw_text": pdf_text
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -307,9 +316,31 @@ def scrape_linkedin_profile(req: LinkedInScrapeRequest):
         
         tailor = ResumeTailor(groq_api_key=req.groq_api_key)
         parsed_data = tailor.parse_resume_text(profile_text[:8000])
-        return parsed_data
+        return {
+            "parsed_data": parsed_data,
+            "raw_text": profile_text
+        }
     except HTTPException:
         raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/resume/synthesize")
+def synthesize_resume_data(req: SynthesizeResumeRequest):
+    """
+    Combines GitHub parsed data, PDF parsed text, and LinkedIn parsed text
+    into a single ultimate, synthesized AI resume.
+    """
+    try:
+        tailor = ResumeTailor(groq_api_key=req.groq_api_key)
+        synthesized_data = tailor.synthesize_resume(
+            github_data=req.github_data,
+            pdf_text=req.pdf_text,
+            linkedin_text=req.linkedin_text
+        )
+        return synthesized_data
     except Exception as e:
         import traceback
         traceback.print_exc()

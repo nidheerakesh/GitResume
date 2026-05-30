@@ -948,3 +948,127 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
             return json.loads(content)
         else:
             raise ValueError(f"AI parsing call failed with status {res.status_code}: {res.text}")
+
+    def synthesize_resume(self, github_data: dict = None, pdf_text: str = "", linkedin_text: str = "") -> dict:
+        """
+        Synthesizes multiple resume sources (GitHub, PDF resume text, LinkedIn profile text)
+        into a single ultimate, ATS-optimized software engineering resume JSON structure.
+        """
+        if not self.url:
+            raise ValueError("No AI API key or connection configured to synthesize resume.")
+
+        github_summary = ""
+        if github_data:
+            github_summary = f"""
+            GitHub Profile: {github_data.get('github', '')}
+            Bio: {github_data.get('bio', '')}
+            Top Projects: {github_data.get('top_projects', [])}
+            Detected Skills: {github_data.get('skills', {})}
+            """
+
+        prompt = f"""
+        You are a World-Class Elite Resume Synthesis Engine and Expert Technical Recruiter.
+        Your goal is to synthesize the following available data sources into the single, ultimate, ATS-optimized, high-fidelity Software Engineering Resume JSON structure.
+
+        --- DATA SOURCE 1: GitHub Codebase & Profile Data ---
+        {github_summary or '[None provided]'}
+
+        --- DATA SOURCE 2: Uploaded PDF Resume Text ---
+        {pdf_text or '[None provided]'}
+
+        --- DATA SOURCE 3: LinkedIn Profile Text ---
+        {linkedin_text or '[None provided]'}
+
+        --- OUTPUT REQUIREMENTS ---
+        1. Parse and extract the candidate's real personal details (Name, Email, Phone, LinkedIn, GitHub, Website). Use the most professional/complete values found across all sources.
+        2. Combine and group all unique skills into three clean arrays inside "skills" (languages, frameworks, tools). Remove duplicates, keep them highly relevant to Software Engineering.
+        3. Experience Section: Merge the work experience from the PDF and LinkedIn profiles. Keep job history chronological, complete, and highly detailed.
+        4. Projects Section: Merge the projects found in GitHub with those in the PDF/LinkedIn.
+           CRITICAL: Craft outstanding, metrics-driven, highly technical, AI-generated project descriptions (3 bullets per project) highlighting coding achievements, APIs used, performance gains (e.g. latency reductions, scale), and real complexity. Do NOT use fake achievements, but do maximize the professional impact.
+        5. Education & Coursework: Extract real degrees, fields, graduation years, and relevant CS/math coursework.
+        6. Achievements & Positions: Extract any honors, competitive programming achievements, leadership roles, or leadership positions.
+
+        OUTPUT JSON SCHEMA (return ONLY this JSON, no markdown fences, no conversational filler):
+        {{
+          "name": "full name",
+          "email": "email address",
+          "phone": "phone number",
+          "linkedin": "LinkedIn profile URL",
+          "github": "GitHub profile URL",
+          "website": "Personal website URL",
+          "summary": "Compelling 3-4 sentence professional summary",
+          "skills": {{
+            "languages": ["lang1", "lang2"],
+            "frameworks": ["fw1", "fw2"],
+            "tools": ["tool1", "tool2"]
+          }},
+          "experience": [
+            {{
+              "title": "job title",
+              "company": "company name",
+              "start_date": "start date",
+              "end_date": "end date or Present",
+              "bullets": [
+                "Detailed, action-oriented experience bullet point highlighting technologies and outcomes",
+                "Another metrics-driven result-oriented bullet point"
+              ]
+            }}
+          ],
+          "projects": [
+            {{
+              "name": "project name",
+              "tech": ["tech1", "tech2"],
+              "url": "project url or empty string",
+              "bullets": [
+                "AI-generated high-impact bullet highlighting architecture, database, or API design decisions",
+                "Metrics-focused bullet showing optimization, performance, testing, or user-centric results"
+              ]
+            }}
+          ],
+          "education": [
+            {{
+              "school": "school name",
+              "degree": "degree (e.g. B.S.)",
+              "field": "field of study (e.g. Computer Science)",
+              "year": "graduation year"
+            }}
+          ],
+          "achievements": ["achievement 1", "achievement 2"],
+          "coursework": {{
+            "cs": "course 1, course 2",
+            "math": "math 1, math 2"
+          }},
+          "positions": [
+            {{
+              "title": "role/position name",
+              "year": "year/duration",
+              "description": "short description"
+            }}
+          ]
+        }}
+        """
+
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": "You are a professional resume synthesizer that outputs structured JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.2
+        }
+
+        import requests
+        import json
+        res = requests.post(self.url, headers=self.headers, json=payload, timeout=30)
+        if res.status_code == 200:
+            content = res.json()["choices"][0]["message"]["content"].strip()
+            if content.startswith("```"):
+                lines = content.split("\n")
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines[-1].startswith("```"):
+                    lines = lines[:-1]
+                content = "\n".join(lines).strip()
+            return json.loads(content)
+        else:
+            raise ValueError(f"AI synthesis call failed with status {res.status_code}: {res.text}")
