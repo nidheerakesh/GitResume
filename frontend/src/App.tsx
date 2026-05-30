@@ -234,15 +234,25 @@ function App() {
 
   // Load saved configurations and versions on mount
   useEffect(() => {
-    const savedToken = localStorage.getItem('gitresume_github_token');
+    // GitHub PAT uses sessionStorage (clears on tab close for security)
+    const savedToken = sessionStorage.getItem('gitresume_github_token');
     if (savedToken) setToken(savedToken);
     
+    // Groq API key persists in localStorage (user's own key)
     const savedGroqKey = localStorage.getItem('gitresume_groq_key');
     if (savedGroqKey) setGroqKey(savedGroqKey);
 
     const versions = localStorage.getItem('gitresume_versions');
     if (versions) {
       setSavedVersions(JSON.parse(versions));
+    }
+    
+    // Migrate any old localStorage tokens to sessionStorage, then clear
+    const legacyToken = localStorage.getItem('gitresume_github_token');
+    if (legacyToken) {
+      sessionStorage.setItem('gitresume_github_token', legacyToken);
+      localStorage.removeItem('gitresume_github_token');
+      setToken(legacyToken);
     }
   }, []);
 
@@ -279,13 +289,14 @@ function App() {
       return;
     }
 
-    // Save configurations to local storage for quick retrieval
+    // Store GitHub PAT in sessionStorage (secure — clears on tab close)
     if (token.trim()) {
-      localStorage.setItem('gitresume_github_token', token.trim());
+      sessionStorage.setItem('gitresume_github_token', token.trim());
     } else {
-      localStorage.removeItem('gitresume_github_token');
+      sessionStorage.removeItem('gitresume_github_token');
     }
     
+    // Store Groq key in localStorage (user's own API key, persists for convenience)
     if (groqKey.trim()) {
       localStorage.setItem('gitresume_groq_key', groqKey.trim());
     } else {

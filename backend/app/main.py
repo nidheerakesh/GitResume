@@ -1,4 +1,5 @@
 import sys
+import re
 from pathlib import Path
 
 # Add backend directory to path to ensure absolute import compatibility in serverless sandboxes
@@ -19,13 +20,28 @@ import os
 app = FastAPI(title="GitResume API", version="1.0.0")
 
 # Enable CORS for frontend communications
+# SECURITY NOTE: In production, replace "*" with your actual frontend domain
+# e.g., allow_origins=["https://your-frontend.vercel.app"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In development, allow all origins
+    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def sanitize_error(error_msg: str) -> str:
+    """
+    Strips any API keys, tokens, or Bearer credentials from error messages
+    before they are returned to clients, preventing accidental secret leakage.
+    """
+    # Redact Bearer tokens (Groq/OpenAI keys in Authorization headers)
+    sanitized = re.sub(r'Bearer\s+[A-Za-z0-9\-_\.]+', 'Bearer [REDACTED]', error_msg)
+    # Redact common API key patterns (gsk_, sk-, ghp_, github_pat_, etc.)
+    sanitized = re.sub(r'(gsk_|sk-|ghp_|github_pat_)[A-Za-z0-9\-_]+', '[REDACTED_KEY]', sanitized)
+    # Redact any token= query params that might appear in URLs
+    sanitized = re.sub(r'token=[A-Za-z0-9\-_\.]+', 'token=[REDACTED]', sanitized)
+    return sanitized
 
 # Pydantic Schemas for validation
 class GenerateResumeRequest(BaseModel):
@@ -91,7 +107,7 @@ def get_github_profile(username: str, token: Optional[str] = None):
         analysis = analyzer.analyze_profile(username)
         return analysis
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error(str(e)))
 
 @app.post("/api/github/profile/{username}")
 def post_github_profile(username: str, req: GitHubProfileRequest):
@@ -107,7 +123,7 @@ def post_github_profile(username: str, req: GitHubProfileRequest):
         analysis = analyzer.analyze_profile(username)
         return analysis
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error(str(e)))
 
 @app.post("/api/resume/generate")
 def generate_resume_data(req: GenerateResumeRequest):
@@ -178,7 +194,7 @@ def generate_resume_data(req: GenerateResumeRequest):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error(str(e)))
 
 @app.post("/api/resume/tailor")
 def tailor_resume_data(req: TailorResumeRequest):
@@ -192,7 +208,7 @@ def tailor_resume_data(req: TailorResumeRequest):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error(str(e)))
 
 @app.post("/api/resume/compile")
 def compile_resume(req: CompileResumeRequest):
@@ -206,7 +222,7 @@ def compile_resume(req: CompileResumeRequest):
             "filename": f"resume_{req.resume_data.get('name', 'candidate').lower().replace(' ', '_')}.tex"
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error(str(e)))
 
 @app.post("/api/resume/chat")
 def chat_resume(req: ChatResumeRequest):
@@ -248,7 +264,7 @@ def chat_resume(req: ChatResumeRequest):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error(str(e)))
 
 @app.post("/api/resume/parse")
 def parse_existing_resume(req: ParseResumeRequest):
@@ -262,7 +278,7 @@ def parse_existing_resume(req: ParseResumeRequest):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error(str(e)))
 
 @app.post("/api/resume/upload-pdf")
 async def upload_pdf_resume(file: UploadFile = File(...), groq_api_key: str = Form(default="")):
@@ -295,7 +311,7 @@ async def upload_pdf_resume(file: UploadFile = File(...), groq_api_key: str = Fo
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error(str(e)))
 
 @app.post("/api/resume/linkedin")
 def scrape_linkedin_profile(req: LinkedInScrapeRequest):
@@ -345,7 +361,7 @@ def scrape_linkedin_profile(req: LinkedInScrapeRequest):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error(str(e)))
 
 @app.post("/api/resume/synthesize")
 def synthesize_resume_data(req: SynthesizeResumeRequest):
@@ -364,4 +380,4 @@ def synthesize_resume_data(req: SynthesizeResumeRequest):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error(str(e)))
