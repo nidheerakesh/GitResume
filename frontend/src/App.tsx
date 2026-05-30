@@ -890,7 +890,7 @@ function App() {
                         style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', borderColor: 'rgba(255,255,255,0.1)' }}
                         onClick={() => {
                           // Allow loading directly
-                          const simulatedResume = {
+                           const simulatedResume = {
                             name: loadedGitHubData.name || '',
                             email: loadedGitHubData.email || '',
                             phone: '',
@@ -905,7 +905,7 @@ function App() {
                             coursework: { cs: '', math: '' },
                             positions: []
                           };
-                          setResumeData(simulatedResume);
+                          setResumeData(simulatedResume as any);
                         }}
                       >
                         Use this source alone
