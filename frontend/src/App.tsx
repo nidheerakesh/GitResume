@@ -107,6 +107,7 @@ interface TailorDiffItem {
   parentName?: string;
   original: string;
   tailored: string;
+  reason?: string;
   status: 'pending' | 'accepted' | 'rejected';
 }
 
@@ -121,6 +122,7 @@ const generateTailorDiffs = (original: any, tailored: any): TailorDiffItem[] => 
       path: ['summary'],
       original: original.summary,
       tailored: tailored.summary,
+      reason: tailored.summary_reason || 'Optimized professional summary to align with the target role.',
       status: 'pending'
     });
   }
@@ -133,6 +135,7 @@ const generateTailorDiffs = (original: any, tailored: any): TailorDiffItem[] => 
     if (tailProj && tailProj.bullets) {
       const origBullets = proj.bullets || [];
       const tailBullets = tailProj.bullets || [];
+      const tailReasons = tailProj.reasons || [];
       origBullets.forEach((bullet: string, bIdx: number) => {
         const tailBullet = tailBullets[bIdx];
         if (tailBullet && bullet.trim() !== tailBullet.trim()) {
@@ -143,6 +146,7 @@ const generateTailorDiffs = (original: any, tailored: any): TailorDiffItem[] => 
             parentName: proj.name,
             original: bullet,
             tailored: tailBullet,
+            reason: tailReasons[bIdx] || 'Adapted bullet highlights to highlight relevant skillsets.',
             status: 'pending'
           });
         }
@@ -158,6 +162,7 @@ const generateTailorDiffs = (original: any, tailored: any): TailorDiffItem[] => 
     if (tailE && tailE.bullets) {
       const origBullets = exp.bullets || [];
       const tailBullets = tailE.bullets || [];
+      const tailReasons = tailE.reasons || [];
       origBullets.forEach((bullet: string, bIdx: number) => {
         const tailBullet = tailBullets[bIdx];
         if (tailBullet && bullet.trim() !== tailBullet.trim()) {
@@ -168,6 +173,7 @@ const generateTailorDiffs = (original: any, tailored: any): TailorDiffItem[] => 
             parentName: exp.company,
             original: bullet,
             tailored: tailBullet,
+            reason: tailReasons[bIdx] || 'Optimized professional highlights to fit role keywords.',
             status: 'pending'
           });
         }
@@ -1810,6 +1816,23 @@ function App() {
                       {diff.tailored}
                     </div>
                   </div>
+                  
+                  {/* Optimization Reason justification */}
+                  {diff.reason && (
+                    <div style={{
+                      background: 'rgba(59, 130, 246, 0.03)',
+                      borderLeft: '3px solid #3b82f6',
+                      borderRadius: '4px',
+                      padding: '0.6rem 0.85rem',
+                      fontSize: '0.8rem',
+                      color: 'var(--text-muted)',
+                      lineHeight: '1.4',
+                      marginTop: '0.25rem'
+                    }}>
+                      <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.15rem' }}>Optimization Justification:</strong>
+                      {diff.reason}
+                    </div>
+                  )}
                   
                   {/* Action Buttons */}
                   <div style={{ display: 'flex', gap: '0.75rem', alignSelf: 'flex-end', marginTop: '0.25rem' }}>

@@ -716,15 +716,30 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                 2. NO FABRICATION: Do not claim experience in areas completely unrelated to the original items. For example, do not rewrite a frontend calendar API integration to claim it uses "machine learning algorithms" or "statistical analysis" unless the original bullet explicitly mentions ML/AI components.
                 3. ENRICHMENT OVER INVENTION: Inject relevant tech stack keywords and ATS verbs from the job description ONLY where they naturally complement and accurately reflect the existing project domain (e.g., specifying React/TypeScript for a frontend project, or SQL/FastAPI/REST APIs for a backend system if the project uses them).
                 4. Keep the exact same number of bullet points and projects in the same order.
+                5. EXPLAIN YOUR CHANGES: For the summary and for EACH rewritten bullet point, provide a short, 1-sentence explanation of WHY this change was made (e.g. "Injected React and TypeScript keywords to match job requirements"). Add these as a parallel list under a "reasons" key for projects and experience, and a "summary_reason" key at the root.
 
                 Return ONLY a JSON object with matching structure:
                 {{
                   "summary": "new tailored summary",
+                  "summary_reason": "justification for summary optimization",
                   "experience": [
-                     {{ "title": "job title", "company": "company", "start_date": "...", "end_date": "...", "bullets": ["tailored bullet 1", "tailored bullet 2"] }}
+                     {{ 
+                       "title": "job title", 
+                       "company": "company", 
+                       "start_date": "...", 
+                       "end_date": "...", 
+                       "bullets": ["tailored bullet 1", "tailored bullet 2"],
+                       "reasons": ["reason for bullet 1 change", "reason for bullet 2 change"]
+                     }}
                   ],
                   "projects": [
-                     {{ "name": "project name", "tech": [...], "url": "...", "bullets": ["tailored bullet 1", "tailored bullet 2"] }}
+                     {{ 
+                       "name": "project name", 
+                       "tech": [...], 
+                       "url": "...", 
+                       "bullets": ["tailored bullet 1", "tailored bullet 2"],
+                       "reasons": ["reason for bullet 1 change", "reason for bullet 2 change"]
+                     }}
                   ]
                 }}
                 Do not wrap in markdown ```json, return raw JSON string.
@@ -756,6 +771,7 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                     # Merge tailored sections back into original structure
                     merged_data = original_data.copy()
                     merged_data["summary"] = tailored_res.get("summary", original_data.get("summary"))
+                    merged_data["summary_reason"] = tailored_res.get("summary_reason", "Optimized professional summary to align with target role.")
                     
                     if "experience" in tailored_res and len(tailored_res["experience"]) == len(original_data.get("experience", [])):
                         merged_data["experience"] = tailored_res["experience"]
