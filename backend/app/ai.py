@@ -842,3 +842,109 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
             tailored_data["experience"] = new_exp
 
         return tailored_data
+
+    def parse_resume_text(self, resume_text: str) -> dict:
+        """
+        Parses raw text of an existing resume into the structured JSON schema using the LLM.
+        """
+        if not self.url:
+            raise ValueError("No AI API key or connection configured to parse resume.")
+            
+        prompt = f"""
+        You are an expert AI Resume Parsing Engine.
+        Your task is to take the following raw text from a candidate's existing resume and extract/map it into the exact structured JSON schema below.
+        
+        Raw Resume Text:
+        ---
+        {resume_text}
+        ---
+
+        Extracted Output JSON Schema:
+        {{
+          "name": "full name (default to 'Software Engineer' if not found)",
+          "email": "email address (default to empty string)",
+          "phone": "phone number (default to empty string)",
+          "linkedin": "LinkedIn profile URL (default to empty string)",
+          "github": "GitHub profile URL (default to empty string)",
+          "website": "Personal website URL (default to empty string)",
+          "summary": "Professional summary paragraph",
+          "skills": {{
+            "languages": ["programming language 1", "programming language 2"],
+            "frameworks": ["framework 1", "framework 2"],
+            "tools": ["tool/database/platform 1", "tool 2"]
+          }},
+          "experience": [
+            {{
+              "title": "job title",
+              "company": "company name",
+              "start_date": "start date/year",
+              "end_date": "end date/year or Present",
+              "bullets": [
+                "detailed action-driven bullet point 1",
+                "detailed action-driven bullet point 2"
+              ]
+            }}
+          ],
+          "projects": [
+            {{
+              "name": "project name",
+              "tech": ["tech 1", "tech 2"],
+              "url": "project url (default to empty string)",
+              "bullets": [
+                "detailed action-driven bullet point 1",
+                "detailed action-driven bullet point 2"
+              ]
+            }}
+          ],
+          "education": [
+            {{
+              "school": "school/university name",
+              "degree": "degree (e.g. B.Tech)",
+              "field": "field of study (e.g. Computer Science)",
+              "year": "graduation year (e.g. 2026)"
+            }}
+          ],
+          "achievements": ["achievement bullet 1", "achievement bullet 2"],
+          "coursework": {{
+            "cs": "relevant CS courses listed in comma separated list",
+            "math": "relevant math courses listed in comma separated list"
+          }},
+          "positions": [
+            {{
+              "title": "leadership role or position",
+              "year": "duration/year",
+              "description": "short description"
+            }}
+          ]
+        }}
+        
+        CRITICAL RULES:
+        1. Keep the parsed bullets factual and true to the candidate's input. Do not invent achievements.
+        2. Ensure all fields are filled. If a section is missing, default it to empty list, empty dictionary, or empty string as shown.
+        3. Do not wrap in markdown ```json, return raw JSON string.
+        """
+        
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": "You are a professional resume parsing engine that outputs structured JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.2
+        }
+        
+        import requests
+        import json
+        res = requests.post(self.url, headers=self.headers, json=payload, timeout=30)
+        if res.status_code == 200:
+            content = res.json()["choices"][0]["message"]["content"].strip()
+            if content.startswith("```"):
+                lines = content.split("\n")
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines[-1].startswith("```"):
+                    lines = lines[:-1]
+                content = "\n".join(lines).strip()
+            return json.loads(content)
+        else:
+            raise ValueError(f"AI parsing call failed with status {res.status_code}: {res.text}")

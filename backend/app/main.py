@@ -47,6 +47,10 @@ class TailorResumeRequest(BaseModel):
 class CompileResumeRequest(BaseModel):
     resume_data: Dict[str, Any]
 
+class ParseResumeRequest(BaseModel):
+    text: str
+    groq_api_key: Optional[str] = None
+
 class ChatMessage(BaseModel):
     role: str
     content: str
@@ -211,6 +215,20 @@ def chat_resume(req: ChatResumeRequest):
             return {"response": content}
         else:
             raise HTTPException(status_code=res.status_code, detail=f"Groq API call failed: {res.text}")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/resume/parse")
+def parse_existing_resume(req: ParseResumeRequest):
+    """
+    Parses a raw text resume or LinkedIn profile copy into structured resume JSON data.
+    """
+    try:
+        tailor = ResumeTailor(groq_api_key=req.groq_api_key)
+        parsed_data = tailor.parse_resume_text(req.text)
+        return parsed_data
     except Exception as e:
         import traceback
         traceback.print_exc()

@@ -212,6 +212,10 @@ function App() {
   const [showVersionsModal, setShowVersionsModal] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Resume Raw Text Import States
+  const [importText, setImportText] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+
   // AI Chat Assistant States
   const [showChatbot, setShowChatbot] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
@@ -259,32 +263,36 @@ function App() {
     return last;
   };
 
-  // Connect & Scrape GitHub
-  const handleConnectGitHub = async (e: React.FormEvent) => {
+  // Save & Enter Workspace Login
+  const handleEnterWorkspace = (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim()) {
       setErrorMsg('GitHub username is required.');
       return;
     }
 
+    // Save configurations to local storage for quick retrieval
+    if (token.trim()) {
+      localStorage.setItem('gitresume_github_token', token.trim());
+    } else {
+      localStorage.removeItem('gitresume_github_token');
+    }
+    
+    if (groqKey.trim()) {
+      localStorage.setItem('gitresume_groq_key', groqKey.trim());
+    } else {
+      localStorage.removeItem('gitresume_groq_key');
+    }
+
+    setIsConnected(true);
+    setErrorMsg('');
+  };
+
+  // Option A: Scrape & Build from GitHub (Public & Private repos supported)
+  const handleScrapeGitHub = async () => {
     setIsLoading(true);
     setErrorMsg('');
-
     try {
-      // Save configurations to local storage for quick retrieval
-      if (token.trim()) {
-        localStorage.setItem('gitresume_github_token', token.trim());
-      } else {
-        localStorage.removeItem('gitresume_github_token');
-      }
-      
-      if (groqKey.trim()) {
-        localStorage.setItem('gitresume_groq_key', groqKey.trim());
-      } else {
-        localStorage.removeItem('gitresume_groq_key');
-      }
-
-      // 1. Fetch & Analyze GitHub profile
       let url = `${API_BASE_URL}/github/profile/${username.trim()}`;
       if (token.trim()) {
         url += `?token=${encodeURIComponent(token.trim())}`;
@@ -295,15 +303,12 @@ function App() {
         let errMsg = 'Failed to fetch profile.';
         try {
           const errBody = await res.json();
-          if (errBody.detail) {
-            errMsg = errBody.detail;
-          }
+          if (errBody.detail) errMsg = errBody.detail;
         } catch (e) {}
         throw new Error(errMsg);
       }
       const githubAnalysis = await res.json();
 
-      // 2. Generate structured resume payload from analysis
       const genRes = await fetch(`${API_BASE_URL}/resume/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -324,22 +329,71 @@ function App() {
         let errMsg = 'Failed to translate GitHub data into resume structure.';
         try {
           const errBody = await genRes.json();
-          if (errBody.detail) {
-            errMsg = errBody.detail;
-          }
+          if (errBody.detail) errMsg = errBody.detail;
         } catch (e) {}
         throw new Error(errMsg);
       }
 
       const structuralResume = await genRes.json();
       setResumeData(structuralResume);
-      setIsConnected(true);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'An error occurred during profiling.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Option B: AI Parse & Import from Raw Resume Text / LinkedIn Profile
+  const handleImportResume = async () => {
+    if (!importText.trim()) {
+      setErrorMsg('Please paste your existing resume or LinkedIn profile text.');
+      return;
+    }
+    setIsImporting(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/resume/parse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: importText,
+          groq_api_key: groqKey.trim() || undefined
+        })
+      });
+
+      if (!res.ok) {
+        let errMsg = 'Failed to parse resume text.';
+        try {
+          const errBody = await res.json();
+          if (errBody.detail) errMsg = errBody.detail;
+        } catch (e) {}
+        throw new Error(errMsg);
+      }
+
+      const parsedResume = await res.json();
+      setResumeData(parsedResume);
+      setImportText('');
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || 'An error occurred while parsing your resume.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Load Saved Version from Local Storage
+  const loadSavedVersion = (version: SavedVersion) => {
+    setResumeData(version.data);
+    alert(`Loaded version "${version.name}" successfully!`);
+  };
+
+  // Delete Saved Version
+  const deleteSavedVersion = (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this saved version?")) return;
+    const updated = savedVersions.filter(v => v.id !== id);
+    setSavedVersions(updated);
+    localStorage.setItem('gitresume_versions', JSON.stringify(updated));
   };
 
   // Compile LaTeX code from active resume state
@@ -611,29 +665,30 @@ function App() {
               </span>
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '1.15rem', marginBottom: '2.5rem' }}>
-              Scrape public contributions, stars, and README technologies. Synthesize clean, recruitment-ready LaTeX structures in one click.
+              Enter your credentials to securely search, scrape, and analyze your repositories. If you provide a Personal Access Token (PAT), we will also securely scan your private repositories!
             </p>
 
-            <form onSubmit={handleConnectGitHub} style={{ background: 'rgba(0,0,0,0.2)', padding: '2rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <form onSubmit={handleEnterWorkspace} style={{ background: 'rgba(0,0,0,0.2)', padding: '2rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {errorMsg && <div style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(239, 68, 68, 0.3)', fontSize: '0.9rem', textAlign: 'left' }}>{errorMsg}</div>}
               
               <div className="form-group">
-                <label className="form-label">GitHub Username</label>
+                <label className="form-label">GitHub Username *</label>
                 <input 
                   type="text" 
                   className="form-control" 
                   placeholder="e.g. gaearon"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  required
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">GitHub OAuth Token </label>
+                <label className="form-label">GitHub Personal Access Token (PAT)</label>
                 <input 
                   type="password" 
                   className="form-control" 
-                  placeholder="Paste GitHub access token to bypass API rate limits"
+                  placeholder="Paste GitHub access token to scan private repositories"
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
                 />
@@ -650,16 +705,8 @@ function App() {
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', marginTop: '0.5rem' }} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <RefreshCw className="animate-spin" size={20} /> Fetching & Analyzing GitHub History...
-                  </>
-                ) : (
-                  <>
-                    Build My Resume <ArrowRight size={20} />
-                  </>
-                )}
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', marginTop: '0.5rem' }}>
+                Enter GitResume Workspace <ArrowRight size={20} />
               </button>
             </form>
 
@@ -678,6 +725,122 @@ function App() {
                 ))}
               </div>
             </div>
+          </div>
+        </main>
+      ) : !resumeData ? (
+        /* PORTAL: CHOOSE AN EXISTING VERSION OR GENERATE A NEW ONE */
+        <main style={{ maxWidth: '900px', margin: '3rem auto', width: '100%', fontFamily: 'Inter, sans-serif' }}>
+          <div style={{ background: 'rgba(15, 23, 42, 0.4)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-lg)', padding: '2.5rem', boxShadow: 'var(--shadow-lg)' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div>
+                <h1 style={{ fontSize: '2rem', margin: 0, fontWeight: '800', background: 'var(--gradient-cosmic)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                  Welcome back, @{username}!
+                </h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginTop: '0.25rem' }}>
+                  Load an existing resume version or create a new tailored resume.
+                </p>
+              </div>
+              <button className="btn btn-secondary" onClick={() => setIsConnected(false)}>
+                Disconnect Profile
+              </button>
+            </div>
+
+            {errorMsg && (
+              <div style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(239, 68, 68, 0.3)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                {errorMsg}
+              </div>
+            )}
+
+            {/* PREVIOUSLY SAVED VERSIONS GRID */}
+            <div style={{ marginBottom: '2.5rem' }}>
+              <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', marginBottom: '1rem', fontWeight: '700' }}>
+                Your Saved Resume Versions ({savedVersions.length})
+              </h3>
+              {savedVersions.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  {savedVersions.map((version) => (
+                    <div key={version.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <span style={{ fontSize: '0.95rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{version.name}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(version.timestamp).toLocaleString()}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="btn btn-primary btn-sm" onClick={() => loadSavedVersion(version)}>
+                          Load
+                        </button>
+                        <button className="btn btn-secondary btn-sm" style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)' }} onClick={() => deleteSavedVersion(version.id)}>
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ background: 'rgba(255, 255, 255, 0.01)', border: '1px dashed var(--border-light)', borderRadius: 'var(--radius-md)', padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  No saved resume configurations found yet. Complete one of the setup flows below to get started!
+                </div>
+              )}
+            </div>
+
+            {/* CREATE NEW RESUME SIDE-BY-SIDE OPTIONS */}
+            <div>
+              <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', marginBottom: '1rem', fontWeight: '700' }}>
+                Create a New Resume
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                
+                {/* OPTION A: SCRAPE GITHUB */}
+                <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'space-between' }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)' }}>Option A: Generate from GitHub</h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5', marginTop: '0.5rem' }}>
+                      Automatically scan your repositories, calculate coding language percentages, and extract key features from README files.
+                    </p>
+                    <div style={{ background: 'rgba(16, 185, 129, 0.05)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.1)', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', marginTop: '0.75rem', lineHeight: '1.4' }}>
+                      💡 <strong>Private Repos:</strong> Since you are logged in, if you provided a PAT, private repositories will also be scanned!
+                    </div>
+                  </div>
+                  <button className="btn btn-primary" style={{ width: '100%', padding: '0.75rem' }} onClick={handleScrapeGitHub} disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <RefreshCw className="animate-spin" size={16} /> Scanning Repositories...
+                      </>
+                    ) : (
+                      "Scrape & Build from GitHub"
+                    )}
+                  </button>
+                </div>
+
+                {/* OPTION B: IMPORT RESUME OR LINKEDIN PROFILE */}
+                <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)' }}>Option B: Import Resume or LinkedIn</h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5', marginTop: '0.5rem' }}>
+                      Paste your existing resume plain text, or press <code>Ctrl+A</code> and copy your LinkedIn profile page text below. Our AI extracts your full professional profile instantly!
+                    </p>
+                  </div>
+                  <textarea
+                    placeholder="Paste raw resume or copied LinkedIn profile text here..."
+                    className="form-control"
+                    value={importText}
+                    onChange={(e) => setImportText(e.target.value)}
+                    style={{ height: '100px', fontSize: '0.8rem', resize: 'none', background: 'rgba(0,0,0,0.2)' }}
+                  />
+                  <button className="btn btn-accent" style={{ width: '100%', padding: '0.75rem' }} onClick={handleImportResume} disabled={isImporting || !importText.trim()}>
+                    {isImporting ? (
+                      <>
+                        <RefreshCw className="animate-spin" size={16} /> Parsing Text with Llama-3...
+                      </>
+                    ) : (
+                      "AI Parse & Load Profile"
+                    )}
+                  </button>
+                </div>
+
+              </div>
+            </div>
+
           </div>
         </main>
       ) : (
