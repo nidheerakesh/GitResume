@@ -1023,10 +1023,32 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
 
         github_summary = ""
         if github_data:
+            pruned_projects = []
+            for p in github_data.get('top_projects', []):
+                # Clean commit history - only keep commit messages, no code diff patches
+                commits = p.get('commits', [])
+                clean_commits = []
+                for c in commits:
+                    if isinstance(c, dict):
+                        clean_commits.append(c.get('message', ''))
+                    else:
+                        clean_commits.append(str(c))
+                
+                pruned_projects.append({
+                    "name": p.get("name"),
+                    "description": p.get("description"),
+                    "stars": p.get("stars", 0) or p.get("stargazers_count", 0),
+                    "language": p.get("language"),
+                    "topics": p.get("topics", []),
+                    "dependencies": p.get("dependencies", [])[:15],
+                    "readme_excerpt": p.get("readme", "")[:300],
+                    "commits": clean_commits[:3]
+                })
+                
             github_summary = f"""
             GitHub Profile: {github_data.get('github', '')}
             Bio: {github_data.get('bio', '')}
-            Top Projects: {github_data.get('top_projects', [])}
+            Top Projects: {pruned_projects}
             Detected Skills: {github_data.get('skills', {})}
             """
 
