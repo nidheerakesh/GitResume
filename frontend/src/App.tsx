@@ -1480,12 +1480,29 @@ function App() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Compiled LaTeX (.tex) Source</span>
-                      <button className="btn btn-secondary btn-sm" onClick={() => {
-                        navigator.clipboard.writeText(latexCode);
-                        alert('LaTeX code copied to clipboard!');
-                      }}>
-                        Copy Source
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button 
+                          className="btn btn-primary btn-sm" 
+                          onClick={() => {
+                            if (resumeData) compileLatexSource(resumeData);
+                          }}
+                          disabled={isCompiling}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem'
+                          }}
+                        >
+                          <RefreshCw size={14} className={isCompiling ? 'animate-spin' : ''} />
+                          Recompile from Editor
+                        </button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => {
+                          navigator.clipboard.writeText(latexCode);
+                          alert('LaTeX code copied to clipboard!');
+                        }}>
+                          Copy Source
+                        </button>
+                      </div>
                     </div>
                     {isCompiling ? (
                       <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
@@ -1511,6 +1528,17 @@ function App() {
                         }}
                       />
                     )}
+                    <div style={{
+                      background: 'rgba(59, 130, 246, 0.05)',
+                      borderLeft: '3px solid var(--primary)',
+                      padding: '0.75rem 1rem',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.8rem',
+                      color: 'var(--text-muted)',
+                      lineHeight: '1.45'
+                    }}>
+                      <strong>💡 LaTeX Code Sync Model:</strong> You can edit the LaTeX source code directly in the box above. Direct modifications here are preserved when copying or downloading your <code>.tex</code> file, but will not update the interactive visual preview on the right (which is compiled from the structured Editor fields). To overwrite manual edits and reload the clean source code from your Editor fields, click <strong>Recompile from Editor</strong>.
+                    </div>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
                       This is real, compilable LaTeX (.tex) source code. You can edit it directly above, copy it, or download it as a .tex file. Paste into <a href="https://www.overleaf.com" target="_blank" style={{color: 'var(--accent)'}}>Overleaf</a> to compile a PDF instantly.
                     </p>
