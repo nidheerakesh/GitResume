@@ -1977,6 +1977,7 @@ function App() {
             </div>
             
           </div>
+        </div>
       )}
 
       {/* FLOATING AI CAREER COACH CHATBOT */}
