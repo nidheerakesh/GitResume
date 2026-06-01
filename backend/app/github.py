@@ -784,7 +784,7 @@ class GitHubAnalyzer:
             "top_projects": top_projects,
             "detected_skills": {
                 "languages": detected_languages,
-                "frameworks": detected_frameworks if detected_frameworks else ["React", "FastAPI"],
+                "frameworks": detected_frameworks,
                 "tools": detected_tools
             }
         }

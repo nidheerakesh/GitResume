@@ -97,7 +97,7 @@ class ResumeTailor:
         Uses the master prompt to generate complete professional resume sections
         from a raw GitHub analysis.
         """
-        # Domain-based auto-enrichment of skills (both AI and fallback inherit this)
+        # Pure dynamic extraction of skills with no forced, generic boilerplate dumps
         skills = analysis.get("detected_skills") or {}
         if not isinstance(skills, dict):
             skills = {}
@@ -106,47 +106,10 @@ class ResumeTailor:
         fworks = list(skills.get("frameworks") or [])
         tools = list(skills.get("tools") or [])
 
-        # Detect domains by scanning projects, descriptions, and topics
-        is_ml_engineer = False
-        is_web_dev = False
-
-        search_corpus = []
-        for r in analysis.get("top_projects", []):
-            search_corpus.append(r.get("name", "").lower())
-            search_corpus.append(r.get("description", "").lower())
-            search_corpus.extend([t.lower() for t in r.get("topics", [])])
-        bio_str = analysis.get("bio", "")
-        if bio_str:
-            search_corpus.append(bio_str.lower())
-
-        ml_keywords = ["ecg", "arrhythmia", "healthcare", "ai", "ml", "signal", "predict", "model", "dataset", "learning", "classifier", "neural", "classification", "heart", "science", "regression", "svm", "random forest", "hailo", "hailo8", "hailo-8"]
-        web_keywords = ["aeon", "planner", "resume", "react", "next", "web", "app", "frontend", "backend", "ts", "js", "api", "generator", "dashboard", "css", "html", "express", "postgres", "mongodb", "convex", "auth", "oauth"]
-
-        if any(any(kw in item for kw in ml_keywords) for item in search_corpus):
-            is_ml_engineer = True
-        if any(any(kw in item for kw in web_keywords) for item in search_corpus):
-            is_web_dev = True
-
-        # Enrich lists with industry-standard stacks for the detected domains
-        if is_ml_engineer:
-            for l in ["Python", "SQL", "C++"]:
-                if l not in langs: langs.append(l)
-            for f in ["PyTorch", "Scikit-learn", "TensorFlow", "NumPy", "Pandas", "Matplotlib", "SciPy", "Seaborn", "Keras"]:
-                if f not in fworks: fworks.append(f)
-            for t in ["Jupyter", "Docker", "Git", "GitHub Actions", "Weights & Biases"]:
-                if t not in tools: tools.append(t)
-
-        if is_web_dev:
-            for l in ["TypeScript", "JavaScript", "HTML5", "CSS3"]:
-                if l not in langs: langs.append(l)
-            for f in ["React", "Next.js", "Vite", "Tailwind CSS", "Node.js", "FastAPI", "Express.js"]:
-                if f not in fworks: fworks.append(f)
-            for t in ["PostgreSQL", "MongoDB", "Convex", "Redis", "Git", "GitHub Actions", "Postman", "Nginx"]:
-                if t not in tools: tools.append(t)
-
-        skills["languages"] = langs
-        skills["frameworks"] = fworks
-        skills["tools"] = tools
+        # Clean duplicates but preserve actual parsed values
+        skills["languages"] = list(set(langs))
+        skills["frameworks"] = list(set(fworks))
+        skills["tools"] = list(set(tools))
         analysis["detected_skills"] = skills
 
         # Format the repository data for the prompt
@@ -231,7 +194,7 @@ The generated output must feel:
 ---
 
 # SPECIAL SKILLS & PROJECTS DIRECTION:
-1. DOMAIN SKILLS ENRICHMENT: The candidate's domain is detected as either Machine Learning (ML) or Web/Full-stack Development. Even if they haven't explicitly listed every framework in their repository breakdown, you MUST include standard toolsets of that domain in the final JSON "skills" block (e.g. PyTorch, Scikit-learn, Scipy, NumPy, Pandas for ML; React, Next.js, Vite, Tailwind CSS for Web Dev).
+1. DYNAMIC SKILLS EXTRACTION: Focus strictly on technical skills, packages, and frameworks that are explicitly present in the input sources (repositories, topics, parsed dependencies). Do NOT dump a generic list of standard technologies for a field (e.g. do not just append TailwindCSS, Next.js, FastAPI, Nginx, or Docker to every web developer). Instead, only represent the exact languages and libraries they actually used. You may logically suggest 2-3 matching additional skills (such as React Router if they used React, or PyTorch Lightning if they used PyTorch) only where they directly complement their unique stack, keeping the skillset highly specific and custom.
 2. MASTER-LEVEL CODE-CENTRIC PROJECT DESCRIPTIONS:
    You are an expert technical recruiter, senior software engineer, and professional resume writer. Your task is to convert raw GitHub repository data into ATS-optimized resume project entries.
    Identify:
@@ -1093,6 +1056,7 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
            (a) all technical skills explicitly extracted from the PDF resume text (DATA SOURCE 2), 
            (b) all skills detected and used in the GitHub repositories (DATA SOURCE 1), and 
            (c) any additional relevant software engineering skills generated by you (the AI) that perfectly complement and enrich the developer's core tech stack. 
+           CRITICAL SKILLS RULE: Absolutely do NOT dump a generic list of standard technologies for a field (e.g. do not just append Next.js, TailwindCSS, MongoDB, Redis, Docker, Kubernetes, etc. to every web developer). Only suggest 2-3 additional relevant software engineering skills that uniquely and directly complement the candidate's core stack. Keep the skillset completely customized.
            Ensure there are no duplicates, keep all items highly relevant to Software Engineering, and sort them logically.
         3. Experience Section: Merge the work experience from the PDF and LinkedIn profiles. Keep job history chronological, complete, and highly detailed.
         4. Projects Section: ONLY output projects that are explicitly specified under top_projects in DATA SOURCE 1 (the GitHub codebase data). 
