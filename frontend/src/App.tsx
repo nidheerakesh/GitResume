@@ -18,6 +18,7 @@ import {
   Upload
 } from 'lucide-react';
 import './App.css';
+import logoImg from './assets/logo.png';
 
 // Types for enriched Resume Structure
 interface Skills {
@@ -744,18 +745,7 @@ function App() {
       <header className="navbar">
         <div className="logo-container">
           <div className="logo-badge" style={{ padding: 0, background: 'transparent', boxShadow: 'none', display: 'flex', alignItems: 'center' }}>
-            <svg width="38" height="38" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-              <rect width="48" height="48" rx="10" fill="#1a2233"/>
-              <g transform="translate(6, 7) scale(0.75)">
-                <path d="M30 8 C30 8 32 6 34 8 C36 10 34 12 32 12 L22 12 C14 12 8 18 8 26 L8 28 C8 28 6 30 8 32 C10 34 12 32 12 30 L12 26 C12 20 16 16 22 16 L28 16" stroke="#3B8DD6" strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M12 30 L12 34 C12 38 16 42 22 42 L28 42" stroke="#3B8DD6" strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M28 16 L28 42" stroke="#1E6AAF" strokeWidth="4.5" fill="none" strokeLinecap="round"/>
-                <path d="M28 16 L34 16 C40 16 40 24 34 24 L28 24" stroke="#1E6AAF" strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M32 24 L40 42" stroke="#1E6AAF" strokeWidth="4.5" fill="none" strokeLinecap="round"/>
-                <circle cx="34" cy="8" r="3.5" fill="#3B8DD6"/>
-                <circle cx="10" cy="30" r="3.5" fill="#3B8DD6"/>
-              </g>
-            </svg>
+            <img src={logoImg} alt="GitResume Logo" width="38" height="38" style={{ borderRadius: '10px' }} />
           </div>
           <span className="logo-text">GitResume</span>
         </div>
