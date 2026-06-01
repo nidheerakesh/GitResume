@@ -417,7 +417,6 @@ function App() {
         body: JSON.stringify({
           github_data: githubPayload,
           pdf_text: loadedPdfText || undefined,
-          linkedin_text: loadedLinkedinText || undefined,
           groq_api_key: groqKey.trim() || undefined
         })
       });
