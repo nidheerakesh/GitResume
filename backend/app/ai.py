@@ -241,30 +241,31 @@ The generated output must feel:
    - Security/authentication, performance optimizations, and cloud/DevOps integrations.
    - APIs and third-party services.
    
-   Follow these absolute rules for bullet points:
-   - Use strong action verbs. Sound like an experienced engineer.
-   - Focus on achievements and implementation details.
-   - NEVER MENTION OR COPY: git workflows, pull request merges, git log boilerplate, commit messages, branch syncs, folder structures, project organization, repository layouts, filenames, documentation files, or roadmap files (e.g. NEVER output bullet points like "Implemented merge pull request #2" or "Merged branch 'main'").
-   - Structure each bullet following Google's formula: **"Accomplished [X], as measured/quantified by [Y], by executing [Z]"** (when quantifiable evidence is present), or soundly describe the deep technical implementation.
-   - Sound like a senior engineer describing their systems to a tech lead, free of generic filler.
+    Follow these absolute rules for bullet points:
+    - Use strong action verbs. Sound like an experienced engineer.
+    - Focus on achievements, architecture, and exact implementation details.
+    - NEVER MENTION OR COPY: git workflows, pull request merges, git log boilerplate, commit messages, branch syncs, folder structures, project organization, repository layouts, filenames, documentation files, or roadmap files (e.g. NEVER output bullet points like "Implemented merge pull request #2" or "Merged branch 'main'").
+    - Focus entirely on high-fidelity, descriptive technical implementations. Describe system design decisions, data flow structure, and utilized technologies.
+    - Sound like a senior engineer describing their systems to a tech lead, free of generic filler.
+    - Absolutely NO fabricated metrics, percentages, or high-scale numbers (e.g. NEVER invent statistics like 'reduced latency by 40%', 'optimized query speeds by 30%', or 'supported 10k+ concurrent requests') unless they are explicitly present in the input repository or commit descriptions.
 
-   BAD EXAMPLES TO AVOID:
-   - [BAD] Architected modular project structure.
-   - [BAD] Maintained repository architecture.
-   - [BAD] Leveraged Python for application logic.
+    BAD EXAMPLES TO AVOID:
+    - [BAD] Architected modular project structure.
+    - [BAD] Maintained repository architecture.
+    - [BAD] Leveraged Python for application logic.
 
-   GOOD EXAMPLES TO EMULATE:
-   - [GOOD] Built an AI-powered document fraud detection pipeline using Gemini and OCR-based feature extraction.
-   - [GOOD] Developed server-side API aggregation services to combine Codeforces, LeetCode, and GitHub activity into a unified analytics dashboard.
-   - [GOOD] Implemented JWT-based authentication and role-based access control for secure user management.
-   - [GOOD] Designed retrieval-augmented generation workflows to provide context-aware responses from uploaded documents.
-   - [GOOD] Optimized database queries and caching strategies, reducing API response latency by 40%.
+    GOOD EXAMPLES TO EMULATE:
+    - [GOOD] Built an AI-powered document fraud detection pipeline using Gemini and OCR-based feature extraction.
+    - [GOOD] Developed server-side API aggregation services to combine Codeforces, LeetCode, and GitHub activity into a unified analytics dashboard.
+    - [GOOD] Implemented JWT-based authentication and role-based access control for secure user management.
+    - [GOOD] Designed retrieval-augmented generation workflows to provide context-aware responses from uploaded documents.
+    - [GOOD] Optimized database queries and caching strategies to improve API response latency.
 
-   When information is insufficient:
-   - Infer likely functionality from source code.
-   - Use conservative assumptions.
-   - Never invent metrics.
-   - Never fabricate scale or users.
+    When information is insufficient:
+    - Infer likely functionality from source code.
+    - Use conservative assumptions.
+    - Strictly never invent metrics or percentages.
+    - Never fabricate scale or users.
 
 ---
 
@@ -673,7 +674,7 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                 "url": f"https://github.com/{analysis.get('username')}/project-{idx}",
                 "bullets": [
                     "Designed and built high performance communication gateways with robust auth models.",
-                    "Optimized data querying layers, reducing latency by 35%."
+                    "Optimized data querying layers to improve overall response times."
                 ]
             })
 
@@ -1022,7 +1023,20 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
             raise ValueError("No AI API key or connection configured to synthesize resume.")
 
         github_summary = ""
+        all_codebase_tools = set()
         if github_data:
+            # 1. Collect general skills/languages
+            detected_skills = github_data.get('detected_skills') or github_data.get('skills', {})
+            if isinstance(detected_skills, dict):
+                for cat in ["languages", "frameworks", "tools"]:
+                    for skill in detected_skills.get(cat, []):
+                        all_codebase_tools.add(str(skill))
+
+            # 2. Collect languages from global language breakdown
+            for l_info in github_data.get("languages", []):
+                if isinstance(l_info, dict) and l_info.get("name"):
+                    all_codebase_tools.add(l_info["name"])
+
             pruned_projects = []
             for p in github_data.get('top_projects', []):
                 # Clean commit history - only keep commit messages, no code diff patches
@@ -1034,6 +1048,12 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                     else:
                         clean_commits.append(str(c))
                 
+                # Collect topics and package dependencies
+                for topic in p.get("topics", []):
+                    all_codebase_tools.add(topic)
+                for dep in p.get("dependencies", []):
+                    all_codebase_tools.add(dep)
+
                 pruned_projects.append({
                     "name": p.get("name"),
                     "description": p.get("description"),
@@ -1045,11 +1065,13 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                     "commits": clean_commits[:3]
                 })
                 
+            sorted_codebase_skills = sorted(list(all_codebase_tools))
             github_summary = f"""
             GitHub Profile: {github_data.get('github', '')}
             Bio: {github_data.get('bio', '')}
             Top Projects: {pruned_projects}
-            Detected Skills: {github_data.get('detected_skills') or github_data.get('skills', {})}
+            Detected Skills Matrix: {detected_skills}
+            All Discovered Codebase Dependencies, Topics & Libraries: {", ".join(sorted_codebase_skills)}
             """
 
         prompt = f"""
@@ -1075,6 +1097,7 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
         3. Experience Section: Merge the work experience from the PDF and LinkedIn profiles. Keep job history chronological, complete, and highly detailed.
         4. Projects Section: ONLY output projects that are explicitly specified under top_projects in DATA SOURCE 1 (the GitHub codebase data). 
            Absolutely DO NOT extract, import, or merge any projects from the PDF resume or LinkedIn profile. You must completely ignore any projects from the PDF resume/LinkedIn and focus exclusively on translating the specified GitHub projects into highly detailed resume project entries (3 bullets per project).
+           CRITICAL RULE: Absolutely NO fabricated metrics, percentages, or high-scale numbers (e.g. 'reduced latency by 40%', 'optimized queries by 30%', or 'scaled to 10k users') unless they are explicitly present in the input repository or commit descriptions. Focus on describing technical actions, architecture, libraries, and direct solutions instead.
         5. Education & Coursework: Extract real degrees, fields, graduation years, and relevant CS/math coursework from the PDF.
         6. Achievements & Positions: Extract any honors, competitive programming achievements, leadership roles, or leadership positions from the PDF.
 
