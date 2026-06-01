@@ -86,6 +86,17 @@ class GitHubAnalyzer:
                 language: primaryLanguage {
                   name
                 }
+                diskUsage
+                isArchived
+                pushedAt
+                homepageUrl
+                repositoryTopics(first: 5) {
+                  nodes {
+                    topic {
+                      name
+                    }
+                  }
+                }
                 languages(first: 5) {
                   edges {
                     size
@@ -177,7 +188,12 @@ class GitHubAnalyzer:
                         "html_url": repo.get("html_url"),
                         "language": repo.get("language", {}).get("name") if repo.get("language") else None,
                         "default_branch": ref_main,
-                        "preloaded_commits": formatted_commits
+                        "preloaded_commits": formatted_commits,
+                        "size": repo.get("diskUsage", 0),
+                        "archived": repo.get("isArchived", False),
+                        "pushed_at": repo.get("pushedAt"),
+                        "homepage": repo.get("homepageUrl"),
+                        "topics": [t.get("topic", {}).get("name") for t in repo.get("repositoryTopics", {}).get("nodes", [])]
                     })
                     
                 return {

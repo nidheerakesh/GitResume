@@ -441,8 +441,8 @@ function App() {
 
   // Synthesize Unified AI Resume from Loaded Sources
   const handleSynthesizeUltimateResume = async () => {
-    if (!loadedGitHubData && !loadedPdfText && !loadedLinkedinText) {
-      setErrorMsg('Please load at least one data resource (GitHub profile, Resume PDF, or LinkedIn profile) to synthesize your resume.');
+    if (!loadedGitHubData && !loadedPdfText) {
+      setErrorMsg('Please load at least one data resource (GitHub profile or Resume PDF) to synthesize your resume.');
       return;
     }
     setIsSynthesizing(true);
@@ -1435,81 +1435,6 @@ function App() {
                   </div>
                 </div>
 
-                {/* 3. LINKEDIN PROFILE SCRAPER / PASTER */}
-                <div style={{ background: 'rgba(255,255,255,0.02)', border: loadedLinkedinText ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'all 0.3s ease' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                    <div style={{ background: loadedLinkedinText ? 'rgba(16, 185, 129, 0.1)' : 'rgba(14, 118, 168, 0.1)', borderRadius: 'var(--radius-md)', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill={loadedLinkedinText ? '#10b981' : '#0e76a8'} xmlns="http://www.w3.org/2000/svg"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)' }}>LinkedIn Profile Scraper</h4>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.45', marginTop: '0.25rem', marginBottom: 0 }}>
-                        Scrape your public LinkedIn URL or copy-paste your profile's text context directly to extract employment history.
-                      </p>
-                      {loadedLinkedinText ? (
-                        <div style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'bold', marginTop: '0.5rem' }}>
-                          ✓ LinkedIn profile data loaded ({loadedLinkedinText.length} characters)
-                        </div>
-                      ) : null}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end', flexShrink: 0 }}>
-                      <button 
-                        className="btn btn-secondary btn-sm" 
-                        style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--text-primary)' }}
-                        onClick={() => setLinkedinPasteOpen(!linkedinPasteOpen)}
-                      >
-                        {linkedinPasteOpen ? 'Close Paste Panel' : 'Paste Profile Text'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* LinkedIn Scrape Input */}
-                  {!linkedinPasteOpen ? (
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '0.25rem' }}>
-                      <input
-                        type="url"
-                        className="form-control"
-                        placeholder="Or enter public profile link: https://www.linkedin.com/in/your-profile"
-                        value={linkedinUrl}
-                        onChange={(e) => setLinkedinUrl(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleLinkedinScrape();
-                          }
-                        }}
-                        style={{ fontSize: '0.8rem', padding: '0.6rem 0.75rem', background: 'rgba(0,0,0,0.2)', flex: 1 }}
-                      />
-                      <button className="btn btn-secondary" style={{ padding: '0.6rem 1.5rem', borderColor: '#0e76a8', color: '#0e76a8' }} onClick={handleLinkedinScrape} disabled={isLinkedinScraping || !linkedinUrl.trim()}>
-                        {isLinkedinScraping ? (
-                          <>
-                            <RefreshCw className="animate-spin" size={14} /> Scraping...
-                          </>
-                        ) : (
-                          "Scrape URL"
-                        )}
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-sm)' }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Paste raw text copied from your LinkedIn Profile Page (select all with Ctrl+A, copy and paste here):</span>
-                      <textarea
-                        className="form-control"
-                        rows={4}
-                        placeholder="Paste copied LinkedIn profile page contents here..."
-                        style={{ fontSize: '0.8rem', background: 'rgba(0,0,0,0.3)', resize: 'none' }}
-                        value={loadedLinkedinText}
-                        onChange={(e) => setLoadedLinkedinText(e.target.value)}
-                      />
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                        <button className="btn btn-primary btn-sm" onClick={() => { setLinkedinPasteOpen(false); alert('LinkedIn text successfully saved into aggregator session!'); }}>
-                          Save Text Data
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
               </div>
 
               {/* Step 2: UNIFIED SYSTEM RESUME SYNTHESIS */}
@@ -1518,7 +1443,7 @@ function App() {
                   Step 2: AI Synthesize Ultimate Developer Resume
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', maxWidth: '600px', margin: '0 auto 1.5rem auto', lineHeight: '1.5' }}>
-                  Combine code metrics, technologies, and repos from <strong>GitHub</strong> alongside employment history and titles from your <strong>PDF/LinkedIn</strong>. AI will construct optimized project descriptions and bullet points.
+                  Combine code metrics, technologies, and repos from <strong>GitHub</strong> alongside employment history and titles from your <strong>PDF</strong>. AI will construct optimized project descriptions and bullet points.
                 </p>
 
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginBottom: '1.5rem', fontSize: '0.8rem', fontWeight: 'bold' }}>
@@ -1527,9 +1452,6 @@ function App() {
                   </span>
                   <span style={{ color: loadedPdfText ? '#10b981' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     {loadedPdfText ? '✓' : '✕'} PDF Resume Source
-                  </span>
-                  <span style={{ color: loadedLinkedinText ? '#10b981' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    {loadedLinkedinText ? '✓' : '✕'} LinkedIn Profile Source
                   </span>
                 </div>
 
@@ -1542,11 +1464,11 @@ function App() {
                     background: 'var(--gradient-cosmic)', 
                     border: 'none', 
                     boxShadow: '0 4px 20px rgba(124, 58, 237, 0.3)',
-                    opacity: (!loadedGitHubData && !loadedPdfText && !loadedLinkedinText) || isSynthesizing ? 0.6 : 1,
-                    cursor: (!loadedGitHubData && !loadedPdfText && !loadedLinkedinText) || isSynthesizing ? 'not-allowed' : 'pointer'
+                    opacity: (!loadedGitHubData && !loadedPdfText) || isSynthesizing ? 0.6 : 1,
+                    cursor: (!loadedGitHubData && !loadedPdfText) || isSynthesizing ? 'not-allowed' : 'pointer'
                   }} 
                   onClick={handleSynthesizeUltimateResume}
-                  disabled={(!loadedGitHubData && !loadedPdfText && !loadedLinkedinText) || isSynthesizing}
+                  disabled={(!loadedGitHubData && !loadedPdfText) || isSynthesizing}
                 >
                   {isSynthesizing ? (
                     <>
@@ -1567,15 +1489,15 @@ function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
                   <div>
                     <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.25rem' }}>The Ultimate Synthesis Workflow:</strong>
-                    First, load your repository metadata using the <strong>GitHub Scraper</strong>. Second, upload your existing work background via <strong>PDF Resume</strong> or paste your <strong>LinkedIn Profile text</strong>. Click <strong>Synthesize</strong> to combine them! AI will write action-oriented project bullet points using your real code commits.
+                    First, load your repository metadata using the <strong>GitHub Scraper</strong>. Second, upload your existing work background via <strong>PDF Resume</strong>. Click <strong>Synthesize</strong> to combine them! AI will write action-oriented project bullet points using your real code commits.
                   </div>
                   <div>
                     <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.25rem' }}>Scanning Private GitHub Repositories:</strong>
                     If you input a personal access token (PAT) on the initial login screen, our crawler securely reviews your private coding repositories to include custom technologies and languages inside your parsed resume dashboard profile.
                   </div>
                   <div>
-                    <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.25rem' }}>Reliable LinkedIn Importing:</strong>
-                    LinkedIn heavily firewalls link crawlers. For 100% success, go to your LinkedIn profile, select **More → Save to PDF**, then upload that file into the **PDF Resume** card! Or click **Paste Profile Text** inside the LinkedIn card and copy page text directly.
+                    <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.25rem' }}>Importing from LinkedIn:</strong>
+                    For 100% success importing LinkedIn data, go to your LinkedIn profile, select **More → Save to PDF**, then upload that file into the **PDF Resume** card!
                   </div>
                   <div>
                     <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.25rem' }}>Contextual AI Chatbot Assistant:</strong>
