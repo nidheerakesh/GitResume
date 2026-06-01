@@ -223,12 +223,8 @@ function App() {
   const [repoLimitWarning, setRepoLimitWarning] = useState(false);
   const [loadedPdfText, setLoadedPdfText] = useState<string>('');
   const [loadedPdfFilename, setLoadedPdfFilename] = useState<string>('');
-  const [loadedLinkedinText, setLoadedLinkedinText] = useState<string>('');
-  const [linkedinUrl, setLinkedinUrl] = useState('');
-  const [isLinkedinScraping, setIsLinkedinScraping] = useState(false);
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
   const [isSynthesizing, setIsSynthesizing] = useState(false);
-  const [linkedinPasteOpen, setLinkedinPasteOpen] = useState(false);
 
   // AI Chat Assistant States
   const [showChatbot, setShowChatbot] = useState(false);
@@ -248,8 +244,6 @@ function App() {
     setRepoLimitWarning(false);
     setLoadedPdfText('');
     setLoadedPdfFilename('');
-    setLoadedLinkedinText('');
-    setLinkedinUrl('');
     setResumeData(null);
     setErrorMsg('');
   };
@@ -397,45 +391,6 @@ function App() {
       setErrorMsg(err.message || 'An error occurred while parsing your PDF.');
     } finally {
       setIsUploadingPdf(false);
-    }
-  };
-
-  // Scrape LinkedIn Profile URL
-  const handleLinkedinScrape = async () => {
-    if (!linkedinUrl.trim()) {
-      setErrorMsg('Please enter a LinkedIn profile URL.');
-      return;
-    }
-    setIsLinkedinScraping(true);
-    setErrorMsg('');
-    try {
-      const res = await fetch(`${API_BASE_URL}/resume/linkedin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: linkedinUrl.trim(),
-          groq_api_key: groqKey.trim() || undefined
-        })
-      });
-
-      if (!res.ok) {
-        let errMsg = 'Failed to scrape LinkedIn profile.';
-        try {
-          const errBody = await res.json();
-          if (errBody.detail) errMsg = errBody.detail;
-        } catch (e) {}
-        throw new Error(errMsg);
-      }
-
-      const responseData = await res.json();
-      setLoadedLinkedinText(responseData.raw_text || '');
-      alert('LinkedIn profile public text fetched & loaded into active session!');
-      setLinkedinUrl('');
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || 'An error occurred while scraping LinkedIn.');
-    } finally {
-      setIsLinkedinScraping(false);
     }
   };
 
