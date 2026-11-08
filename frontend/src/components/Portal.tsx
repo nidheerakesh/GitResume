@@ -98,6 +98,7 @@ export function Portal(props: PortalProps) {
         </div>
 
         {props.errorMsg && <Alert tone="error">{props.errorMsg}</Alert>}
+        {(props.github.data?.warnings || []).map((w) => <Alert key={w} tone="warning">{w}</Alert>)}
 
         <SavedVersions versions={props.savedVersions} onLoad={props.onLoadVersion} onDelete={props.onDeleteVersion} />
 

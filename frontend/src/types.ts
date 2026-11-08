@@ -117,6 +117,7 @@ export interface GitHubAnalysis {
   public_repos?: number;
   total_stars?: number;
   top_projects?: GitHubRepo[];
+  warnings?: string[];
   detected_skills?: Skills;
 }
 

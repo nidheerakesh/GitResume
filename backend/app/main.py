@@ -7,7 +7,7 @@ backend_dir = str(Path(__file__).resolve().parent.parent)
 if backend_dir not in sys.path:
     sys.path.append(backend_dir)
 
-from app.github import GitHubAnalyzer
+from app.github import GitHubAnalyzer, GitHubError
 from app.resume import generate_resume_latex, TEMPLATES, DEFAULT_TEMPLATE
 from app.pdf import compile_pdf, find_tectonic, LatexCompileError
 from app.ai import ResumeTailor
@@ -113,6 +113,8 @@ async def get_github_profile(username: str, token: Optional[str] = None):
         analyzer = GitHubAnalyzer(token=token)
         analysis = await analyzer.analyze_profile(username)
         return analysis
+    except GitHubError as e:
+        raise HTTPException(status_code=e.status, detail=sanitize_error(str(e)))
     except Exception as e:
         raise HTTPException(status_code=500, detail=sanitize_error(str(e)))
 
@@ -129,6 +131,8 @@ async def post_github_profile(username: str, req: GitHubProfileRequest):
         analyzer = GitHubAnalyzer(token=req.token)
         analysis = await analyzer.analyze_profile(username)
         return analysis
+    except GitHubError as e:
+        raise HTTPException(status_code=e.status, detail=sanitize_error(str(e)))
     except Exception as e:
         raise HTTPException(status_code=500, detail=sanitize_error(str(e)))
 

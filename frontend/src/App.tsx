@@ -442,7 +442,7 @@ function App() {
           education: [],
           achievements: publicRepos > 0 ? [{
             title: 'Open Source Contributor',
-            description: `Maintained ${publicRepos} public repositories on GitHub with ${loadedGitHubData.total_stars || 0} stars`,
+            description: `Maintained ${publicRepos} public repositories on GitHub with ${loadedGitHubData.total_stars || 0} ${loadedGitHubData.total_stars === 1 ? 'star' : 'stars'}`,
             year: new Date().getFullYear().toString()
           }] : [],
           coursework: { cs: '', math: '' },

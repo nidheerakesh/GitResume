@@ -63,6 +63,54 @@ def _match_keywords(data: dict, jd_lower: str, extra_missing: list = None, vocab
     return {"matched": matched, "missing": missing}
 
 
+_SKIP_MSG = ["initial commit", "add files via upload", "update readme", "merge", "pull request", "wip", "typo"]
+
+
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word}" if n == 1 else f"{n} {word}s"
+
+
+def _first_sentence(text: str) -> str:
+    lines = [l.strip() for l in (text or "").split("\n")]
+    lines = [l for l in lines if l and l[0] not in "#!<[|-`"]
+    if not lines:
+        return ""
+    s = lines[0].split(". ")[0].strip()
+    return s[:160].rstrip(".")
+
+
+def _commit_themes(commits: list) -> list:
+    out = []
+    for c in commits or []:
+        msg = c.get("message", "") if isinstance(c, dict) else str(c)
+        first = (msg or "").split("\n")[0].strip()
+        if first and not any(k in first.lower() for k in _SKIP_MSG) and first not in out:
+            out.append(first.rstrip("."))
+    return out[:2]
+
+
+def _fact_bullets(p: dict, techs: list, deps: list) -> list:
+    res = []
+    desc = (p.get("description") or "").strip().rstrip(".")
+    if desc:
+        res.append(desc[0].upper() + desc[1:] + ".")
+    langs = [k for k, _ in sorted((p.get("repo_languages") or {}).items(), key=lambda x: x[1], reverse=True)][:3]
+    if not langs and p.get("language"):
+        langs = [p["language"]]
+    if langs:
+        line = "Written in " + ", ".join(langs)
+        if deps:
+            line += " using " + ", ".join(deps[:4])
+        res.append(line + ".")
+    sent = _first_sentence(p.get("readme"))
+    if sent and sent.lower() != desc.lower():
+        res.append(sent + ".")
+    themes = _commit_themes(p.get("commits"))
+    if themes:
+        res.append("Commit history includes: " + "; ".join(themes) + ".")
+    return res[:3] or [f"Contributed to the {p.get('name', 'project')} repository."]
+
+
 class ResumeTailor:
     def __init__(self, api_key: str = None, groq_api_key: str = None, openrouter_api_key: str = None):
         # Gather all possible keys (from parameters or environment variables)
@@ -230,10 +278,10 @@ class ResumeTailor:
         prompt = f"""
 # MASTER SYSTEM PROMPT FOR AI RESUME + PORTFOLIO GENERATION ENGINE
 
-You are an elite AI-powered resume architect, technical recruiter, developer portfolio strategist, and engineering career analyst.
+You are an AI-powered resume writer, technical recruiter, developer portfolio strategist, and engineering career analyst.
 
 Your job is to transform structured GitHub intelligence into:
-* premium resumes
+* resumes
 * recruiter-optimized profiles
 * portfolio content
 * GitHub README sections
@@ -332,7 +380,7 @@ Aggregate of all repositories:
 
 # ANALYSIS & OUTPUT REQUIREMENTS
 
-Perform elite archetype detection, trait analysis, and technical evaluation based on this evidence. 
+Perform archetype detection, trait analysis, and technical evaluation based on this evidence. 
 
 FEW-SHOT STYLISTIC TEMPLATE EXAMPLES (Follow these styles with absolute fidelity):
 You must dynamically analyze the candidate's raw repository names, metadata, and code patch changes to detect the specific languages, tools, libraries (e.g. NumPy, Scikit-learn, React, Tailwind CSS), and systems algorithms they used.
@@ -342,17 +390,17 @@ Formulate a highly polished, descriptive project title (e.g. "Real-Time Study Sy
   - Name: "AEON: Real-Time RPG Study Sync Platform"
   - Tech: ["React", "TypeScript", "Convex", "Vite", "Tailwind CSS"]
   - Bullets:
-    * "Architected real-time client-state synchronization across 15 interactive dashboards, eliminating data fetching race conditions by implementing Convex sync hooks and reactive Convex query schemas."
-    * "Engineered an RPG-themed gamification engine utilizing normalized study streaks, flat-rate task completion XP formulas, and state managers, increasing user daily planner retention."
+    * "Architected real-time client-state synchronization across the dashboard views by implementing Convex sync hooks and reactive Convex query schemas."
+    * "Engineered an RPG-themed gamification engine utilizing normalized study streaks, flat-rate task completion XP formulas, and state managers."
     * "Refactored calendar views by mapping Google Calendar API integrations to dynamic upcoming contest sidebar widgets, enabling seamless platform-agnostic schedule alignment."
 
 * Style Example 2 (Signal Processing & Data Science):
   - Name: "ECG Signal Analysis & Arrhythmia Classification (AI-ECG)"
   - Tech: ["Python", "PyTorch", "Scikit-Learn", "NumPy", "Pandas", "Matplotlib"]
   - Bullets:
-    * "Engineered high-accuracy arrhythmia classification neural networks by processing raw physiological waveforms using PyTorch and customized Scikit-Learn evaluation pipelines."
-    * "Optimized raw waveform data-handling routines with vectorised NumPy and Pandas pipelines, reducing feature extraction latency during data prep."
-    * "Formulated preprocessing and model evaluation models, achieving robust classification accuracy on multi-channel MIT-BIH dataset signal recordings."
+    * "Engineered arrhythmia classification neural networks by processing raw physiological waveforms using PyTorch and customized Scikit-Learn evaluation pipelines."
+    * "Optimized raw waveform data-handling routines with vectorised NumPy and Pandas pipelines for data preparation."
+    * "Formulated preprocessing and model evaluation models on the MIT-BIH dataset signal recordings."
 
 * Style Example 3 (Custom Developer Tooling):
   - Name: "GitResume: Production-Ready ATS Resume Architect"
@@ -369,55 +417,29 @@ Synthesize this comprehensive recruiter-optimized engineering narrative and outp
 The JSON output MUST follow this exact structure to match the frontend editor fields:
 
 {{
-  "summary": "Elite professional summary. Generate a unified recruiter-ready, highly modern, technically specific, and ambitious professional summary (2-3 sentences max) tailored specifically to the developer's archetype, core languages, and achievements. Avoid corporate cringe.",
+  "summary": "<2-3 sentence factual summary using only languages, projects, and facts present in the input>",
   "skills": {{
-    "languages": ["Complete list of programming languages used, sorted by confidence/demonstrated expertise"],
-    "frameworks": ["Complete list of frameworks and libraries detected from topics and descriptions, sorted by proficiency"],
-    "tools": ["Complete list of databases, devops tools, cloud platforms, and engineering tools detected, sorted by proficiency"]
+    "languages": ["<language present in the input>"],
+    "frameworks": ["<framework or library present in the input>"],
+    "tools": ["<tool or platform present in the input>"]
   }},
   "projects": [
     {{
-      "name": "Project Name",
-      "tech": ["Main technologies utilized in this project"],
-      "start_date": "Jul 2025",
-      "end_date": "Nov 2025",
-      "url": "Repository URL",
+      "name": "<repository name or descriptive title>",
+      "tech": ["<technology present in the input for this repository>"],
+      "start_date": "<Mon YYYY from the input, or empty string>",
+      "end_date": "<Mon YYYY, Present, or empty string>",
+      "url": "<repository URL from the input>",
       "bullets": [
-        "Quantifiable action-oriented highlight of feature addition, system design, or engineering complexity based strictly on their commit evidence",
-        "Technical challenge solved, performance optimization, or scalability indicator implemented",
-        "Measurable engineering outcome, automated deployment, or code quality standards applied"
+        "<bullet describing a feature or design choice supported by the input for this repository>"
       ]
     }}
   ],
-  "experience": [
-    {{
-      "title": "Software Engineering Intern",
-      "company": "Open Source Contributor / Organization",
-      "start_date": "Jan 2025",
-      "end_date": "Present",
-      "location": "Remote",
-      "bullets": [
-        "Spearheaded technical development for key components and open-source subsystems, demonstrating high-velocity contributions.",
-        "Collaborated with project maintainers on version control, pull requests, automated testing, and standard engineering reviews.",
-        "Refactored legacy code blocks and built robust pipeline operations, improving build parameters and latency metrics."
-      ]
-    }}
-  ],
-  "achievements": [
-    {{
-      "title": "Elite Open Source Contributor",
-      "description": "Successfully maintained {analysis.get('public_repos', 0)} repositories on GitHub with {analysis.get('total_stars', 0)} stars",
-      "year": "2026"
-    }},
-    {{
-      "title": "Technical Innovation Award",
-      "description": "Engineered custom automation pipelines and edge systems, optimizing developer workflows and build outcomes",
-      "year": "2025"
-    }}
-  ]
+  "experience": [],
+  "achievements": []
 }}
 
-Ensure all fields are fully synthesized, human-sounding, technically authentic to the evidence, and extremely premium!
+Rules for the JSON: use only facts present in the input. Do not invent roles, employers, awards, dates, metrics, or features. Leave "experience" and "achievements" as empty arrays unless the input contains real entries for them. Include every repository listed in the input as a project.
 """
         if self.url:
             try:
@@ -460,7 +482,7 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                 if self.groq_api_key or self.api_key:
                     raise ValueError(error_detail)
 
-        # Local heuristic fallback matching premium prompt requirements
+        # Local heuristic fallback
         mock_projects = []
         
         def clean_commit_msg(msg):
@@ -529,7 +551,7 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
             clean = clean.replace('-', ' ').replace('_', ' ')
             return ' '.join(word.capitalize() for word in clean.split())
 
-        for pIdx, p in enumerate(analysis.get("top_projects", [])[:3]):
+        for pIdx, p in enumerate(analysis.get("top_projects", [])):
             raw_techs = p.get("topics", [])
             raw_deps = p.get("dependencies", [])
             readme = p.get("readme", "")
@@ -545,17 +567,12 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                 for lang in repo_langs.keys():
                     if lang not in raw_techs:
                         raw_techs.append(lang)
-            if not raw_techs:
-                raw_techs = ["Git", "GitHub"]
-
             # Filter and clean package names
             techs = []
             for t in raw_techs:
                 cleaned = clean_tech_name(t)
                 if cleaned and cleaned not in techs:
                     techs.append(cleaned)
-            if not techs:
-                techs = ["Git", "GitHub"]
 
             # Filter and clean dependencies specifically
             deps = []
@@ -566,139 +583,15 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
 
             p_name = p.get("name", "Project")
             desc = p.get("description", "")
-            
-            # Use README to build a better description if available
-            readme_summary = ""
-            if readme:
-                # Extract first meaningful paragraph from README
-                lines = [l.strip() for l in readme.split('\n') if l.strip() and not l.strip().startswith('#') and not l.strip().startswith('!') and not l.strip().startswith('---')]
-                if lines:
-                    readme_summary = ' '.join(lines[:3])[:200]
-
-            # Detect Domain: Machine Learning, Frontend Web, or Backend Web
-            techs_lower = [t.lower() for t in techs]
-            deps_lower = [d.lower() for d in deps]
-            
-            is_ml = any(t in techs_lower or t in deps_lower for t in ["torch", "pytorch", "tensorflow", "keras", "scikit-learn", "numpy", "pandas", "opencv", "diffusers", "nlp", "ml", "ai"]) or any(kw in p_name.lower() or kw in (desc or "").lower() for kw in ["ai", "ml", "machine learning", "deep learning", "neural", "ecg", "heart", "prediction", "classifier"])
-            is_frontend = any(t in techs_lower or t in deps_lower for t in ["react", "vue", "angular", "nextjs", "next.js", "svelte", "html", "css", "tailwind", "typescript", "javascript", "google/genai", "next", "types/react", "react-dom"])
-            is_backend = any(t in techs_lower or t in deps_lower for t in ["fastapi", "flask", "django", "express", "node", "spring", "python", "postgresql", "mysql", "mongodb", "redis", "sqlite", "prisma", "convex", "shell", "bash"])
-
-            bullets = []
-            tech_str = ', '.join(techs[:3]) if techs else 'standard tools'
-            dep_str = ', '.join(deps[:3]) if deps else ''
-            
-            # Define rich variation tables for bullet points based on project index
-            # This ensures Project #1, #2, and #3 NEVER look identical!
-            bullet_templates = {
-                "ml": [
-                    [
-                        f"Engineered an advanced machine learning architecture for {p_name} to execute high-fidelity data modeling and feature processing using {tech_str}.",
-                        f"Synthesized a custom artificial intelligence model for {p_name} leveraging {tech_str} to predict and classify core data patterns.",
-                        f"Developed a high-performance deep learning pipeline for {p_name} utilizing {tech_str} to automate complex analytical workflows."
-                    ],
-                    [
-                        f"Integrated and configured {dep_str} libraries to establish robust training configurations and accelerate statistical processing." if deps else "Constructed custom mathematical layers and preprocessing pipelines to refine raw datasets.",
-                        f"Structured scalable neural network parameters and data ingestion layers to support low-latency model evaluations.",
-                        f"Designed high-performance dataset parsers to guarantee reliable validation cycles and prevent overfitting."
-                    ],
-                    [
-                        f"Optimized training pipelines and inference execution routines, enhancing speed metrics for maximum runtime throughput.",
-                        f"Refactored matrix computation strategies to reduce memory footprint and safeguard resource utilization in production.",
-                        f"Enhanced overall prediction accuracy metrics by refining neural layers and implementing modular code practices."
-                    ]
-                ],
-                "backend": [
-                    [
-                        f"Architected a scalable, high-throughput backend service for {p_name} using {tech_str} to handle system-critical operations and performant data storage.",
-                        f"Designed and deployed a modular RESTful API gateway for {p_name} leveraging {tech_str} to establish secure, low-latency endpoints.",
-                        f"Engineered a resilient server-side framework for {p_name} utilizing {tech_str} to automate backend microservices."
-                    ],
-                    [
-                        f"Integrated and configured {dep_str} libraries to implement reliable system integrations, strict type safety, and modular API contracts." if deps else "Constructed robust database handlers and transactional layers to accelerate data persistence.",
-                        f"Configured multi-tier authentication protocols and structured database migrations to guarantee data integrity.",
-                        f"Engineered high-performance web service integrations to support high concurrent load capacities cleanly."
-                    ],
-                    [
-                        f"Refactored database query architectures and caching strategies, reducing latency metrics and safeguarding thread-safe operations in production.",
-                        f"Optimized overall server-side execution cycles, implementing separation of concerns for simplified maintenance.",
-                        f"Enhanced API response benchmarks by establishing micro-caching layers and optimizing structural algorithms."
-                    ]
-                ],
-                "frontend": [
-                    [
-                        f"Designed and developed a premium, responsive client interface for {p_name} leveraging {tech_str} to deliver seamless state management.",
-                        f"Crafted a visually stunning, highly interactive user experience for {p_name} using {tech_str} for pixel-perfect presentation.",
-                        f"Architected an elegant client-side application structure for {p_name} utilizing {tech_str} to support rapid feature scaling."
-                    ],
-                    [
-                        f"Integrated and configured {dep_str} libraries to establish high-fidelity routing, component rendering, and custom state hooks." if deps else "Constructed dynamic UI components and complex event listeners to deliver flawless user interactions.",
-                        f"Engineered custom styling systems and reusable layout patterns to ensure cross-device display consistency.",
-                        f"Optimized modern web rendering pipelines to eliminate layout shifts and deliver lightning-fast interactive states."
-                    ],
-                    [
-                        f"Optimized overall compilation pipelines and asset loading speeds, implementing modular clean code structures for long-term maintainability.",
-                        f"Refactored complex UI flows and rendering cycles to boost responsiveness and lower overall Time-to-Interactive.",
-                        f"Established rigorous component structure guidelines, elevating long-term codebase maintainability."
-                    ]
-                ],
-                "general": [
-                    [
-                        f"Engineered and deployed the {p_name} application using {tech_str} to deliver modular, high-performance system capabilities.",
-                        f"Designed and synthesized the core architecture for {p_name} utilizing {tech_str} to resolve critical execution bottlenecks.",
-                        f"Developed and modularized the {p_name} project using {tech_str} to enable high-efficiency local runs."
-                    ],
-                    [
-                        f"Integrated and configured {dep_str} libraries to establish robust integration layers and modular code patterns." if deps else "Constructed optimized system wrappers and helper scripts to accelerate daily development runs.",
-                        f"Structured robust file parsers and environment configs to streamline local deployment across environments.",
-                        f"Refactored operational logic into decoupled components to improve scalability and reduce coupling."
-                    ],
-                    [
-                        f"Optimized system runtimes and resource management, reducing build times and code complexity.",
-                        f"Enhanced overall execution throughput by establishing modular structures and standard testing targets.",
-                        f"Implemented rigorous code guidelines, ensuring a clean, open-source-ready codebase."
-                    ]
-                ]
-            }
-
-            v_idx = pIdx % 3
-            if is_ml:
-                bullets.append(bullet_templates["ml"][0][v_idx])
-                bullets.append(bullet_templates["ml"][1][v_idx])
-                bullets.append(bullet_templates["ml"][2][v_idx])
-            elif is_frontend:
-                bullets.append(bullet_templates["frontend"][0][v_idx])
-                bullets.append(bullet_templates["frontend"][1][v_idx])
-                bullets.append(bullet_templates["frontend"][2][v_idx])
-            elif is_backend:
-                bullets.append(bullet_templates["backend"][0][v_idx])
-                bullets.append(bullet_templates["backend"][1][v_idx])
-                bullets.append(bullet_templates["backend"][2][v_idx])
-            else:
-                bullets.append(bullet_templates["general"][0][v_idx])
-                bullets.append(bullet_templates["general"][1][v_idx])
-                bullets.append(bullet_templates["general"][2][v_idx])
+            bullets = _fact_bullets(p, techs, deps)
 
             mock_projects.append({
                 "name": p_name,
                 "tech": techs[:4],
-                "start_date": "2025",
-                "end_date": "Present",
+                "start_date": "",
+                "end_date": "",
                 "url": p.get("url") or f"https://github.com/{analysis.get('username')}/{p.get('name')}",
                 "bullets": bullets[:3]
-            })
-
-        while len(mock_projects) < 3:
-            idx = len(mock_projects) + 1
-            mock_projects.append({
-                "name": f"Core System Project {idx}",
-                "tech": ["Python", "FastAPI", "React"],
-                "start_date": "Jul 2024",
-                "end_date": "Nov 2024",
-                "url": f"https://github.com/{analysis.get('username')}/project-{idx}",
-                "bullets": [
-                    "Designed and built high performance communication gateways with robust auth models.",
-                    "Optimized data querying layers to improve overall response times."
-                ]
             })
 
         lang_list = skills.get('languages', [])
@@ -715,7 +608,7 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
         if repo_count > 0:
             real_achievements.append({
                 "title": "Open Source Contributor",
-                "description": f"Maintained {repo_count} public repositories on GitHub with {star_count} stars",
+                "description": f"Maintained {repo_count} public repositories on GitHub with {_plural(star_count, 'star')}",
                 "year": "2025"
             })
 
@@ -1076,7 +969,7 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
             """
 
         prompt = f"""
-        You are a World-Class Elite Resume Synthesis Engine and Expert Technical Recruiter.
+        You are a Resume Synthesis Engine and Expert Technical Recruiter.
         Your goal is to synthesize the following available data sources into the single, ultimate, ATS-optimized, high-fidelity Software Engineering Resume JSON structure.
 
         --- DATA SOURCE 1: GitHub Codebase & Profile Data ---

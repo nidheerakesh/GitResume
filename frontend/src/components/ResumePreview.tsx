@@ -36,6 +36,7 @@ export function ResumeSheet({ resume, buildId = 0 }: ResumeSheetProps) {
         <div className="resume-p-contact">{contact}</div>
       </div>
 
+      {resume.education.length > 0 && (
       <Section title="Education">
         {resume.education.map((edu, idx) => (
           <div key={idx} className="resume-p-item">
@@ -50,6 +51,7 @@ export function ResumeSheet({ resume, buildId = 0 }: ResumeSheetProps) {
           </div>
         ))}
       </Section>
+      )}
 
       {resume.experience.length > 0 && (
         <Section title="Experience">
@@ -77,7 +79,7 @@ export function ResumeSheet({ resume, buildId = 0 }: ResumeSheetProps) {
             <div key={idx} className="resume-p-item">
               <div className="resume-p-row resume-p-bold">
                 <span>{p.name}</span>
-                <span className="resume-p-date">{p.start_date} – {p.end_date}</span>
+                <span className="resume-p-date">{[p.start_date, p.end_date].filter(Boolean).join(' – ')}</span>
               </div>
               <div className="resume-p-row resume-p-italic">
                 <span>{p.tech.join(', ')}</span>
@@ -110,20 +112,24 @@ export function ResumeSheet({ resume, buildId = 0 }: ResumeSheetProps) {
       <Section title="Technical Skills">
         <table>
           <tbody>
-            <tr>
-              <td className="col-half">
-                <strong>Programming languages:</strong> {resume.skills.languages.join(', ')}
-              </td>
-              <td className="col-half col-gap">
-                <strong>Web Technologies:</strong> {resume.skills.frameworks.join(', ')}
-              </td>
-            </tr>
-            <tr>
-              <td className="col-half row-gap">
-                <strong>Tools & Databases:</strong> {resume.skills.tools.join(', ')}
-              </td>
-              <td className="col-half col-gap row-gap" />
-            </tr>
+            {(resume.skills.languages.length > 0 || resume.skills.frameworks.length > 0) && (
+              <tr>
+                <td className="col-half">
+                  {resume.skills.languages.length > 0 && (<><strong>Programming languages:</strong> {resume.skills.languages.join(', ')}</>)}
+                </td>
+                <td className="col-half col-gap">
+                  {resume.skills.frameworks.length > 0 && (<><strong>Web Technologies:</strong> {resume.skills.frameworks.join(', ')}</>)}
+                </td>
+              </tr>
+            )}
+            {resume.skills.tools.length > 0 && (
+              <tr>
+                <td className="col-half row-gap">
+                  <strong>Tools & Databases:</strong> {resume.skills.tools.join(', ')}
+                </td>
+                <td className="col-half col-gap row-gap" />
+              </tr>
+            )}
           </tbody>
         </table>
       </Section>

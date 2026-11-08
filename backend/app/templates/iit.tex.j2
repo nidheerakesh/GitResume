@@ -178,7 +178,7 @@
 \resumeProject
 {<< project.name >>}
 {<< project.tech | join(', ') >>}
-{<< project.start_date >> - << project.end_date >>}
+{<% if project.start_date or project.end_date %><< project.start_date >> - << project.end_date >><% endif %>}
 {\href{<< project.url >>}{GitHub}}
 \resumeItemListStart
 <% for bullet in project.bullets %>
@@ -202,14 +202,20 @@
 \vspace{-2.5mm}
 <% endif %>
 
+<% if skills.languages or skills.frameworks or skills.tools %>
 %-----------TECHNICAL SKILLS-----------------
 \section{Technical Skills}
 \vspace{0.2mm}
 \small{\begin{tabular*}{\textwidth}[t]{p{0.5\textwidth} p{0.5\textwidth}}
-\hspace{-3.1mm}{\textbf{ Programming languages:} << skills.languages | join(', ') >>} & {\textbf{Web Technologies:} << skills.frameworks | join(', ') >>} \\  
+<% if skills.languages or skills.frameworks %>
+\hspace{-3.1mm}{<% if skills.languages %>\textbf{ Programming languages:} << skills.languages | join(', ') >><% endif %>} & {<% if skills.frameworks %>\textbf{Web Technologies:} << skills.frameworks | join(', ') >><% endif %>} \\
+<% endif %>
+<% if skills.tools %>
 \hspace{-3.1mm}{\textbf{ Tools \& Databases:} << skills.tools | join(', ') >>} & {}
+<% endif %>
 \end{tabular*}}
 \vspace{-2.5mm}
+<% endif %>
 
 <% if coursework and (coursework.cs or coursework.math) %>
 %-----------COURSEWORK-----------------

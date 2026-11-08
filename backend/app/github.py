@@ -22,6 +22,12 @@ class GitHubCache:
             "timestamp": time.time()
         }
 
+class GitHubError(Exception):
+    def __init__(self, status: int, message: str):
+        super().__init__(message)
+        self.status = status
+
+
 class GitHubAnalyzer:
     def __init__(self, token: str = None):
         self.token = token
@@ -39,6 +45,7 @@ class GitHubAnalyzer:
             
         self.headers["Accept"] = "application/vnd.github.v3+json"
         self._rate_limit_remaining = None
+        self._skipped = set()
 
     def _check_rate_limit(self, headers):
         """Track GitHub API rate limit from response headers."""
@@ -50,6 +57,11 @@ class GitHubAnalyzer:
         if self._rate_limit_remaining is None:
             return True
         return self._rate_limit_remaining > needed
+
+    def _rate_warnings(self) -> List[str]:
+        if not self._skipped:
+            return []
+        return [f"GitHub rate limit reached; {len(self._skipped)} repos scanned without README/languages. Add a token."]
 
     async def _safe_get(self, client: httpx.AsyncClient, url: str, timeout: int = 10) -> httpx.Response:
         """Make a GET request using the async client and track rate limits."""
@@ -211,9 +223,9 @@ class GitHubAnalyzer:
         if profile_res.status_code != 200:
             if profile_res.status_code == 403:
                 remaining = profile_res.headers.get("X-RateLimit-Remaining", "0")
-                raise Exception(f"GitHub API rate limit exceeded (remaining: {remaining}). Please provide a PAT.")
+                raise GitHubError(429, f"GitHub API rate limit exceeded (remaining: {remaining}). Add a GitHub token and try again.")
             elif profile_res.status_code == 404:
-                raise Exception(f"GitHub user '{username}' was not found.")
+                raise GitHubError(404, f"GitHub user '{username}' was not found.")
             raise Exception(f"REST fetch failed: {profile_res.text}")
             
         profile = profile_res.json()
@@ -221,7 +233,10 @@ class GitHubAnalyzer:
         repos_url = f"https://api.github.com/users/{username}/repos?per_page=100&type=owner"
         repos_res = await self._safe_get(client, repos_url)
         
-        repos = repos_res.json() if repos_res.status_code == 200 else []
+        if repos_res.status_code != 200:
+            status = 429 if repos_res.status_code == 403 else 502
+            raise GitHubError(status, f"Could not list repositories for '{username}' (GitHub returned {repos_res.status_code}). Add a GitHub token and try again.")
+        repos = repos_res.json()
         return {
             "profile": profile,
             "repositories": repos
@@ -229,6 +244,7 @@ class GitHubAnalyzer:
 
     async def fetch_repo_readme(self, client: httpx.AsyncClient, owner: str, repo: str) -> str:
         if not self._has_rate_budget(2):
+            self._skipped.add(repo)
             return ""
         try:
             url = f"https://api.github.com/repos/{owner}/{repo}/readme"
@@ -244,7 +260,8 @@ class GitHubAnalyzer:
     async def fetch_user_commits(self, client: httpx.AsyncClient, owner: str, repo: str, username: str, preloaded: list = None) -> list:
         """Asynchronously harvests up to 3 commits and fetches diff patches concurrently."""
         if not self._has_rate_budget(3):
-            return [{"message": "Contributed code to this repository", "code_diffs": []}]
+            self._skipped.add(repo)
+            return []
             
         try:
             # If we preloaded commits via GraphQL, bypass the commits list fetch!
@@ -253,7 +270,8 @@ class GitHubAnalyzer:
                 commits_url = f"https://api.github.com/repos/{owner}/{repo}/commits?author={username}&per_page=3"
                 res = await self._safe_get(client, commits_url)
                 if res.status_code != 200:
-                    return [{"message": "Contributed code to this repository", "code_diffs": []}]
+                    self._skipped.add(repo)
+                    return []
                 commits = res.json()
                 
             contributions = []
@@ -292,13 +310,15 @@ class GitHubAnalyzer:
                     commit_msg = c.get("message") or c.get("commit", {}).get("message", "Contributed code")
                     contributions.append({"message": commit_msg.strip(), "code_diffs": []})
                     
-            return contributions if contributions else [{"message": "Contributed code to this repository", "code_diffs": []}]
+            return contributions
         except:
-            return [{"message": "Contributed code to this repository", "code_diffs": []}]
+            self._skipped.add(repo)
+            return []
 
     async def fetch_repo_context(self, client: httpx.AsyncClient, owner: str, repo: str, default_branch: str = "main") -> dict:
         context = {"languages": {}, "file_tree": [], "dependencies": [], "source_code": []}
         if not self._has_rate_budget(5):
+            self._skipped.add(repo)
             return context
             
         try:
@@ -417,11 +437,6 @@ class GitHubAnalyzer:
             profile = raw_data["profile"]
             repos = [r for r in raw_data["repositories"] if not r.get("fork", False)]
         except Exception as e:
-            if not self.token:
-                print(f"Scraping without token failed for '{username}'. Falling back to high-fidelity synthetic mock data: {e}")
-                fallback_data = self.get_mock_analysis(username)
-                GitHubCache.set(cache_key, fallback_data)
-                return fallback_data
             if username.lower() in ["demo", "test"]:
                 return self.get_mock_analysis(username)
             raise e
@@ -582,7 +597,7 @@ class GitHubAnalyzer:
                 async def fetch_all_repo_data(r=repo, o=owner, n=name, db=default_branch, p=preloaded, sc=candidate_score):
                     commits = await self.fetch_user_commits(client, o, n, username, preloaded=p)
                     # Discard repositories with absolutely zero commits
-                    if not commits:
+                    if not commits and n not in self._skipped:
                         return None
                     readme = await self.fetch_repo_readme(client, o, n)
                     context = await self.fetch_repo_context(client, o, n, db)
@@ -604,7 +619,7 @@ class GitHubAnalyzer:
                     # Double check forks
                     if repo.get("fork", False) or repo.get("is_fork", False):
                         continue
-                    if not res["commits"]:
+                    if not res["commits"] and repo.get("name") not in self._skipped:
                         continue
                         
                     # Calculate Deep Engineering Quality & Impact Score (Stage 3)
@@ -782,6 +797,7 @@ class GitHubAnalyzer:
             "total_forks": forks_count,
             "languages": languages_breakdown,
             "top_projects": top_projects,
+            "warnings": self._rate_warnings(),
             "detected_skills": {
                 "languages": detected_languages,
                 "frameworks": detected_frameworks,
