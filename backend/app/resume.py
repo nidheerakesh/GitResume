@@ -1,5 +1,6 @@
 import jinja2
 import re
+from pathlib import Path
 
 # Custom Jinja2 Environment for LaTeX to avoid { } conflicts
 latex_jinja_env = jinja2.Environment(
@@ -12,252 +13,22 @@ latex_jinja_env = jinja2.Environment(
     autoescape=False
 )
 
-LATEX_TEMPLATE = r"""%-------------------------
-% Resume in Latex
-% Author : Tejas Khairnar
-% Generated via GitResume
-%------------------------
+TEMPLATE_DIR = Path(__file__).parent / "templates"
 
-\documentclass[a4paper,11pt]{article}
-\usepackage{latexsym}
-\usepackage{xcolor}
-\usepackage{float}
-\usepackage{ragged2e}
-\usepackage[empty]{fullpage}
-\usepackage{wrapfig}
-\usepackage{lipsum}
-\usepackage{tabularx}
-\usepackage{titlesec}
-\usepackage{geometry}
-\usepackage{marvosym}
-\usepackage{verbatim}
-\usepackage{enumitem}
-\usepackage[hidelinks]{hyperref}
-\usepackage{fancyhdr}
-\usepackage{multicol}
-\usepackage{graphicx}
-\usepackage{cfr-lm}
-\usepackage[T1]{fontenc}
-\usepackage{fontawesome}
-\usepackage[most]{tcolorbox}
+TEMPLATES = [
+    {"id": "iit", "name": "IIT style", "description": "Academic one-column with roll number, coursework and positions."},
+    {"id": "jakes", "name": "Jake's Resume", "description": "Classic one-column ATS layout used by most tech applicants."},
+    {"id": "modern", "name": "Modern minimal", "description": "Sans-serif one-column with a colored accent."},
+    {"id": "twocol", "name": "Compact two-column", "description": "Sidebar for skills and education to fit more on one page."},
+]
+TEMPLATE_IDS = {t["id"] for t in TEMPLATES}
+DEFAULT_TEMPLATE = "iit"
 
-% Set the margins
-\geometry{left=0.85cm, top=0.8cm, right=0.85cm, bottom=0.2cm}
 
-% Sections formatting
-\titleformat{\section}{
-  \vspace{-4pt}\scshape\raggedright\large
-}{}{0em}{}[\color{black}\titlerule \vspace{-7pt}]
-
-%-------------------------
-% Custom commands
-
-\newcommand{\resumePOR}[3]{
-\vspace{0.5mm}\item[]
-    \begin{tabular*}{\textwidth}[t]{l@{\extracolsep{\fill}}r}
-    \hspace{-3mm}{#1}:\hspace{1mm} & \hspace*{0pt}\hfill{\footnotesize{ #3}} \vspace{-0.5mm}\\ \hspace{-2.9mm}#2 
-    \end{tabular*}
-    \vspace{0mm}
-}
-
-\newcommand{\resumeExp}[4]{
-\vspace{0mm}\item[]
-    \begin{tabular*}{\textwidth}[t]{l@{\extracolsep{\fill}}r}
-        \hspace{-4.4mm} \small\textbf{#1} & {\footnotesize{#3}}\vspace{-1.2mm}\\
-        \hspace{-4.3mm} \footnotesize{\text{#2}} & \footnotesize{#4}
-    \end{tabular*}
-    \vspace{-6.1mm}
-}
-
-\newcommand{\resumeProject}[4]{
-\vspace{0mm}\item[]
-    \begin{tabular*}{\textwidth}[t]{l@{\extracolsep{\fill}}r}
-        \hspace{-4.4mm} \small\textbf{#1} & {\footnotesize{#3}}\vspace{-1mm}\\
-        \hspace{-4.3mm} \footnotesize{\text{#2}} & \footnotesize{#4}
-    \end{tabular*}
-    \vspace{-6.5mm}
-}
-
-\newcommand{\resumeEdu}[4]{
-\vspace{0mm}\item[]
-    \begin{tabular*}{\textwidth}[t]{l@{\extracolsep{\fill}}r}
-        \hspace{-4.3mm} \small\textbf{#1} & \footnotesize{#3}\vspace{-1mm} \\
-        \hspace{-4.3mm} \footnotesize{#2} & \footnotesize{#4}
-    \end{tabular*}
-    \vspace{-3.2mm}
-}
-
-\newcommand{\resumeAchieve}[3]
-{
-\hspace{-3.1mm}\textbf{ #1} & {#2} & \hspace{3mm}\footnotesize{#3}
-\vspace{0mm}\\
-}
-
-\renewcommand{\labelitemi}{$\vcenter{\hbox{\tiny$\bullet$}}$}
-
-\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=*,labelsep=0mm,itemsep=-2.5mm]}
-
-\newcommand{\resumeItemListStart}{\begin{justify}\begin{itemize}[leftmargin=3ex, rightmargin=2ex, noitemsep,labelsep=1.2mm,itemsep=0mm]\small}
-
-\newcommand{\resumeSubHeadingListEnd}{\end{itemize}\vspace{-2mm}}
-\newcommand{\resumeItemListEnd}{\end{itemize}\end{justify}\vspace{-1.5mm}}
-
-\renewcommand{\arraystretch}{1}
-
-\newcolumntype{L}{>{\raggedright\arraybackslash}X}%
-\newcolumntype{R}{>{\raggedleft\arraybackslash}X}%
-\newcolumntype{C}{>{\centering\arraybackslash}X}%
-
-%-------------------------------------------
-%%%%%%  CV STARTS HERE  %%%%%%%%%%%
-
-\newcommand{\name}{<< name >>} % Your Name
-\newcommand{\course}{<< course >>} % Your Course
-\newcommand{\roll}{<< roll >>} % Your Roll No.
-\newcommand{\phone}{<< phone >>} % Your Phone Number
-\newcommand{\emaila}{<< email >>} % Email
-\newcommand{\github}{<< github_username >>} % Github short
-\newcommand{\website}{<< website >>} % Website
-\newcommand{\linkedin}{<< linkedin_username >>} % Linkedin short
-
-\begin{document}
-\fontfamily{cmr}\selectfont
-
-%----------HEADING-----------------
-\begin{center}
-    \LARGE{\textbf{\name}}
-\end{center}
-\vspace{-6.5mm}
-\begin{center}
-    \small{
-        <% set contact_parts = [] %>
-        <% if github_username %>
-        <% set _ = contact_parts.append("\\href{https://github.com/" + github_username + "}{\\faGithub \\hspace{0.2mm} github.com/" + github_username + "}") %>
-        <% endif %>
-        <% if linkedin_username %>
-        <% set _ = contact_parts.append("\\href{https://www.linkedin.com/in/" + linkedin_username + "/}{\\faLinkedinSquare \\hspace{0.2mm} linkedin.com/in/" + linkedin_username + "}") %>
-        <% endif %>
-        <% if email %>
-        <% set _ = contact_parts.append("\\href{mailto:" + email + "}{\\faSend \\hspace{0.2mm} " + email + "}") %>
-        <% endif %>
-        <% if phone %>
-        <% set _ = contact_parts.append("\\faPhone \\hspace{0.2mm} " + phone) %>
-        <% endif %>
-        << contact_parts | join(' | ') >>
-    }
-\end{center}
-\vspace{-3mm}
-
-<% if education %>
-%-----------EDUCATION-----------------
-\vspace{-2.5mm}
-\section{Education}
-\resumeSubHeadingListStart
-<% for edu in education %>
-\resumeEdu
-{<< edu.school >>} 
-{<< edu.degree >>} 
-{<< edu.start_date >> - << edu.end_date >>} 
-{GPA: << edu.gpa >>}
-<% endfor %>
-\resumeSubHeadingListEnd
-\vspace{-3.5mm}
-<% endif %>
-
-<% if experience %>
-%-----------EXPERIENCE-----------------
-\section{Experience}
-\resumeSubHeadingListStart
-<% for job in experience %>
-\resumeExp
-{<< job.company >>}
-{<< job.title >>}
-{<< job.start_date >> - << job.end_date >>}
-{<< job.location >>}
-\resumeItemListStart
-<% for bullet in job.bullets %>
-\item[$\bullet$] << bullet >>
-<% endfor %>
-\resumeItemListEnd
-<% endfor %>
-\resumeSubHeadingListEnd
-\vspace{-5.5mm}
-<% endif %>
-
-%-----------PROJECTS-----------------
-\section{Projects}
-\resumeSubHeadingListStart
-<% for project in projects %>
-<% if not project.hidden %>
-\resumeProject
-{<< project.name >>}
-{<< project.tech | join(', ') >>}
-{<< project.start_date >> - << project.end_date >>}
-{\href{<< project.url >>}{GitHub}}
-\resumeItemListStart
-<% for bullet in project.bullets %>
-\item[$\bullet$] << bullet >>
-<% endfor %>
-\resumeItemListEnd
-<% endif %>
-<% endfor %>
-\resumeSubHeadingListEnd
-\vspace{-5.5mm}
-
-<% if achievements %>
-%-----------ACHIEVEMENTS-----------------
-\section{Achievements}
-\vspace{0.2mm}
-\small{\begin{tabular*}{\textwidth}[t]{p{0.22\textwidth} p{0.68\textwidth}@{\extracolsep{\fill}}r}
-<% for ach in achievements %>
-\resumeAchieve{<< ach.title >>}{<< ach.description >>}{<< ach.year >>}
-<% endfor %>
-\end{tabular*}}
-\vspace{-2.5mm}
-<% endif %>
-
-%-----------TECHNICAL SKILLS-----------------
-\section{Technical Skills}
-\vspace{0.2mm}
-\small{\begin{tabular*}{\textwidth}[t]{p{0.5\textwidth} p{0.5\textwidth}}
-\hspace{-3.1mm}{\textbf{ Programming languages:} << skills.languages | join(', ') >>} & {\textbf{Web Technologies:} << skills.frameworks | join(', ') >>} \\  
-\hspace{-3.1mm}{\textbf{ Tools \& Databases:} << skills.tools | join(', ') >>} & {}
-\end{tabular*}}
-\vspace{-2.5mm}
-
-<% if coursework and (coursework.cs or coursework.math) %>
-%-----------COURSEWORK-----------------
-\section{Relevant Coursework}
-\vspace{0.2mm}
-\small{\begin{tabular*}{\textwidth}[t]{p{\textwidth}}
-<% if coursework.cs %>
-\hspace{-3.1mm}\textbf{ Computer Science: }{<< coursework.cs >>}\\
-<% endif %>
-<% if coursework.math %>
-\hspace{-3.1mm}\textbf{ Mathematics: }{<< coursework.math >>}
-<% endif %>
-\end{tabular*}}
-\vspace{-2.5mm}
-<% endif %>
-
-<% if positions %>
-%-----------POSITIONS OF RESPONSIBILITY-----------------
-\section{Positions of Responsibility}
-\vspace{-0.4mm}
-\resumeSubHeadingListStart
-<% for por in positions %>
-\resumePOR{\textbf{<< por.title >>}}
-{<< por.description >>}
-{\raisebox{0.75pt}{<< por.year >>}}
-\vspace{0.5mm}
-<% endfor %>
-\resumeSubHeadingListEnd
-\hspace*{-2mm}\rule{1.030\textwidth}{0.1mm}
-\vspace{0mm}
-<% endif %>
-
-\end{document}
-"""
+def load_template(template_id: str) -> str:
+    if template_id not in TEMPLATE_IDS:
+        raise ValueError(f"Unknown template '{template_id}'")
+    return (TEMPLATE_DIR / f"{template_id}.tex.j2").read_text()
 
 def sanitize_latex(text: str) -> str:
     """
@@ -284,7 +55,7 @@ def sanitize_latex(text: str) -> str:
     regex = re.compile('|'.join(re.escape(str(key)) for key in special_chars.keys()))
     return regex.sub(lambda match: special_chars[match.group()], text)
 
-def generate_resume_latex(data: dict) -> str:
+def generate_resume_latex(data: dict, template_id: str = DEFAULT_TEMPLATE) -> str:
     """
     Takes structural resume data and generates compiled, ATS-ready LaTeX source code.
     """
@@ -333,5 +104,5 @@ def generate_resume_latex(data: dict) -> str:
     if "positions" not in sanitized_data:
         sanitized_data["positions"] = []
     
-    template = latex_jinja_env.from_string(LATEX_TEMPLATE)
+    template = latex_jinja_env.from_string(load_template(template_id))
     return template.render(**sanitized_data)
