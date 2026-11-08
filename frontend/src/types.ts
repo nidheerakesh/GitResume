@@ -121,3 +121,11 @@ export type Tab =
   | 'latex';
 
 export type ChatMessage = { role: 'user' | 'assistant'; content: string };
+
+export interface TemplateInfo {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export type PreviewMode = 'pdf' | 'sheet';

@@ -1,4 +1,4 @@
-import { CheckCircle, Copy, RefreshCw, Sparkles } from 'lucide-react';
+import { CheckCircle, Copy, Play, RefreshCw, Sparkles } from 'lucide-react';
 import { Spinner, TextArea } from '../ui';
 
 interface TailorFieldsProps {
@@ -53,15 +53,20 @@ interface LatexFieldsProps {
   isCompiling: boolean;
   onRecompile: () => void;
   onCopy: () => void;
+  onCompileEdits: () => void;
+  canCompileEdits: boolean;
 }
 
-export function LatexFields({ latexCode, setLatexCode, isCompiling, onRecompile, onCopy }: LatexFieldsProps) {
+export function LatexFields({ latexCode, setLatexCode, isCompiling, onRecompile, onCopy, onCompileEdits, canCompileEdits }: LatexFieldsProps) {
   return (
     <div className="stack">
       <div className="toolbar">
         <span className="toolbar-title">LaTeX source</span>
         <div className="row row-tight">
-          <button className="btn btn-primary btn-sm" onClick={onRecompile} disabled={isCompiling}>
+          <button className="btn btn-primary btn-sm" onClick={onCompileEdits} disabled={!canCompileEdits || isCompiling || !latexCode.trim()}>
+            <Play size={14} /> Compile my edits
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={onRecompile} disabled={isCompiling}>
             <RefreshCw size={14} className={isCompiling ? 'spin' : ''} />
             Rebuild from fields
           </button>
@@ -85,10 +90,10 @@ export function LatexFields({ latexCode, setLatexCode, isCompiling, onRecompile,
       )}
 
       <div className="note note-info">
-        Edits here stay in this source. The preview follows the fields, not this box. <strong>Rebuild from fields</strong> replaces this source with a fresh one from the fields.
+        Edit the source and press <strong>Compile my edits</strong> to see it in the PDF preview. Editing any field rebuilds this source from the fields and replaces hand edits, so download the .tex first if you want to keep them.
       </div>
       <p className="muted small">
-        Compiles as a standard article class. Paste it into <a href="https://www.overleaf.com" target="_blank" rel="noopener noreferrer">Overleaf</a> to get a PDF.
+        Download .tex to open it in <a href="https://www.overleaf.com" target="_blank" rel="noopener noreferrer">Overleaf</a> or any LaTeX editor.
       </p>
     </div>
   );

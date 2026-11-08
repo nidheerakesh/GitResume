@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
-import type { ResumeData } from '../types';
+import type { PreviewMode, ResumeData, TemplateInfo } from '../types';
 import { getShortGithub, getShortLinkedin } from '../resumeUtils';
+import { Spinner } from './ui';
+import type { PdfPreviewState } from './usePdfPreview';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -166,15 +168,80 @@ export function ResumeSheet({ resume, buildId = 0 }: ResumeSheetProps) {
   );
 }
 
-export function ResumePreview({ resume, buildId }: ResumeSheetProps) {
+interface ResumePreviewProps {
+  resume: ResumeData;
+  buildId: number;
+  templates: TemplateInfo[];
+  templateId: string;
+  onTemplateChange: (id: string) => void;
+  mode: PreviewMode;
+  onModeChange: (mode: PreviewMode) => void;
+  pdf: PdfPreviewState;
+}
+
+export function ResumePreview({ resume, buildId, templates, templateId, onTemplateChange, mode, onModeChange, pdf }: ResumePreviewProps) {
+  const showPdf = mode === 'pdf' && pdf.available;
   return (
     <section className="panel preview-panel">
       <div className="panel-header">
         <h2>Preview</h2>
-        <span className="muted small">IIT Guwahati template</span>
+        <div className="preview-controls">
+          <label className="preview-template">
+            <span className="muted small">Template</span>
+            <select value={templateId} onChange={(e) => onTemplateChange(e.target.value)}>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id} title={t.description}>{t.name}</option>
+              ))}
+            </select>
+          </label>
+          <div className="seg">
+            <button
+              type="button"
+              className={`seg-btn${mode === 'pdf' ? ' is-active' : ''}`}
+              aria-pressed={mode === 'pdf'}
+              disabled={!pdf.available}
+              onClick={() => onModeChange('pdf')}
+            >
+              PDF
+            </button>
+            <button
+              type="button"
+              className={`seg-btn${mode === 'sheet' ? ' is-active' : ''}`}
+              aria-pressed={mode === 'sheet'}
+              onClick={() => onModeChange('sheet')}
+            >
+              Live sheet
+            </button>
+          </div>
+        </div>
       </div>
       <div className="resume-preview-wrapper">
-        <ResumeSheet resume={resume} buildId={buildId} />
+        {!showPdf ? (
+          <>
+            {mode === 'pdf' && !pdf.available && (
+              <p className="note note-info">The server has no PDF engine, so this shows the live sheet. Install Tectonic to get real PDFs.</p>
+            )}
+            {mode === 'sheet' && (
+              <p className="muted small preview-hint">The live sheet updates as you type and always uses the IIT layout. Switch to PDF to see the chosen template.</p>
+            )}
+            <ResumeSheet resume={resume} buildId={buildId} />
+          </>
+        ) : (
+          <div className="pdf-stage">
+            {pdf.error && <p className="note note-error" role="alert">{pdf.error}</p>}
+            {pdf.isCustom && (
+              <p className="muted small preview-hint">Showing your edited LaTeX. Editing a field rebuilds it from the fields.</p>
+            )}
+            {pdf.url ? (
+              <iframe className="pdf-frame" title="Compiled PDF preview" src={`${pdf.url}#toolbar=0&navpanes=0&view=FitH`} />
+            ) : !pdf.error && (
+              <div className="empty-state"><Spinner size={20} /> Compiling the first PDF…</div>
+            )}
+            {pdf.isCompiling && pdf.url && (
+              <span className="pdf-busy"><Spinner size={14} /> Updating…</span>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );
