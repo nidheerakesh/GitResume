@@ -2,6 +2,8 @@
 \usepackage[a4paper,margin=1.6cm]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
+\usepackage[default]{sourcesanspro}
+\renewcommand{\familydefault}{\sfdefault}
 \usepackage[hidelinks]{hyperref}
 \usepackage{enumitem}
 \usepackage{titlesec}
@@ -93,26 +95,16 @@
 <% if skills.languages or skills.frameworks or skills.tools %>
 %-----------SKILLS-----------------
 \section{Skills}
-<% if skills.languages %>
-\textbf{Languages:} << skills.languages | join(', ') >>\\
-<% endif %>
-<% if skills.frameworks %>
-\textbf{Frameworks:} << skills.frameworks | join(', ') >>\\
-<% endif %>
-<% if skills.tools %>
-\textbf{Tools:} << skills.tools | join(', ') >>
-<% endif %>
+<% if skills.languages %>\textbf{Languages:} << skills.languages | join(', ') >>\\<% endif %>
+<% if skills.frameworks %>\textbf{Frameworks:} << skills.frameworks | join(', ') >>\\<% endif %>
+<% if skills.tools %>\textbf{Tools:} << skills.tools | join(', ') >><% endif %>
 <% endif %>
 
 <% if coursework and (coursework.cs or coursework.math) %>
 %-----------COURSEWORK-----------------
 \section{Relevant Coursework}
-<% if coursework.cs %>
-\textbf{Computer Science:} << coursework.cs >>\\
-<% endif %>
-<% if coursework.math %>
-\textbf{Mathematics:} << coursework.math >>
-<% endif %>
+<% if coursework.cs %>\textbf{Computer Science:} << coursework.cs >>\\<% endif %>
+<% if coursework.math %>\textbf{Mathematics:} << coursework.math >><% endif %>
 <% endif %>
 
 <% if achievements %>
