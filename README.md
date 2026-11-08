@@ -40,6 +40,10 @@ flowchart LR
 - **Synthesis.** Combines GitHub and PDF sources into one draft. A local heuristic fallback still produces a usable draft when no LLM key is set or the API is unavailable.
 - **Structured editor.** Edit header, skills, education, experience, projects, achievements, coursework, and positions of responsibility. Hide individual projects without deleting them.
 - **AI tailoring.** Paste a job description. The model proposes wording changes, and you accept or reject each one before it applies.
+- **Create tailored resume.** Paste a job description and get a new saved version named `Tailored: <role>`. You approve each reworded bullet, relevant projects are picked, skills are reordered, and a keyword check shows what the job asks for. Nothing is invented: only existing content is reordered, selected, or reworded. Your original version is kept.
+- **Four LaTeX templates.** IIT style, Jake's Resume, Modern minimal, and Compact two-column. See [Templates](#templates).
+- **Real PDF output.** The backend compiles LaTeX to PDF on the server with [Tectonic](https://tectonic-typesetting.github.io/). The preview shows the compiled PDF by default, with a *Live sheet* toggle for the HTML preview.
+- **Hand-edited LaTeX.** Edit the generated LaTeX source yourself and compile your version to PDF.
 - **Career coach chat.** Ask why a skill or bullet is there, and get answers grounded in the current resume.
 - **Export.** Download the compiled `.tex` (editable in the app), or print the preview to an ATS-friendly PDF.
 - **Saved versions.** Keep named snapshots in the browser and reload them later.
@@ -70,6 +74,20 @@ npm run dev
 
 Open <http://localhost:5173>. On `localhost`, the app calls the backend at `http://localhost:5000/api` automatically.
 
+### PDF engine (Tectonic)
+
+PDF output needs the Tectonic LaTeX engine on the backend machine.
+
+- **Linux:** download the static musl build from the [Tectonic releases page](https://github.com/tectonic-typesetting/tectonic/releases). Use the asset named `tectonic-<version>-x86_64-unknown-linux-musl.tar.gz`, extract it, and put `tectonic` in `~/.local/bin` (make sure that folder is on your `PATH`). The glibc build needs glibc 2.39 or newer, so the musl build is the safe choice on Ubuntu 22.04.
+- **macOS:** `brew install tectonic`
+- **Windows:** see the [Tectonic install docs](https://tectonic-typesetting.github.io/book/latest/installation/).
+
+The first compile downloads LaTeX packages, which can take a few minutes. Later compiles take a couple of seconds.
+
+The backend looks for Tectonic in this order: the `TECTONIC_BIN` environment variable, then `tectonic` on `PATH`, then `~/.local/bin/tectonic`. Without it, the app falls back to the Live sheet and browser print.
+
+The Docker image installs Tectonic automatically.
+
 ### Docker
 
 ```bash
@@ -80,6 +98,34 @@ docker-compose up --build
 | -------- | ----------------------- |
 | Frontend | http://localhost:3000   |
 | Backend  | http://localhost:5000   |
+
+## Templates
+
+| ID | Name | Best for |
+| --- | --- | --- |
+| `iit` | IIT style | Academic one-column layout with roll number, coursework and positions |
+| `jakes` | Jake's Resume | Classic one-column ATS layout used by most tech applicants |
+| `modern` | Modern minimal | Clean sans-serif one-column layout with a colored accent |
+| `twocol` | Compact two-column | Fitting more on one page, with a sidebar for skills and education |
+
+Templates live in `backend/app/templates/<id>.tex.j2`. They are Jinja templates with custom delimiters: `<% %>` for blocks, `<< >>` for variables, and `<# #>` for comments. To add a template, add the file and add an entry to `TEMPLATES` in `backend/app/resume.py`.
+
+Jake's Resume template is based on the MIT-licensed design by Jake Gutierrez.
+
+## API
+
+All routes are under `/api`.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/templates` | List templates, the default template id, and whether PDF output is available |
+| `POST` | `/api/resume/compile` | Return LaTeX source for `resume_data`. Takes an optional `template` id |
+| `POST` | `/api/resume/pdf` | Compile to PDF. Send `{resume_data, template}` or `{latex}`. Returns `application/pdf` |
+
+`POST /api/resume/pdf` returns:
+
+- `422` on LaTeX errors, with `detail.message` and `detail.log`
+- `503` when Tectonic is not installed
 
 ## Configuration
 
