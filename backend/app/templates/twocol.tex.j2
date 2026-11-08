@@ -63,7 +63,7 @@
 \section{Education}
 <% for edu in education %>
 \noindent\textbf{<< edu.school >>}\\
-<< edu.degree >>\hfill << span(edu.start_date, edu.end_date) >>
+<< edu.degree >>\\ {\itshape << span(edu.start_date, edu.end_date) >>}
 <% if edu.gpa %>\\GPA: << edu.gpa >><% endif %>\par
 <% endfor %>
 <% endif %>
