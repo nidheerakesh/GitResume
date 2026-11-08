@@ -85,6 +85,18 @@ export interface TailorDiffItem {
   status: 'pending' | 'accepted' | 'rejected';
 }
 
+export interface TailorInsights {
+  targetRole: string;
+  relevantProjects: string[];
+  skills: Skills;
+  keywords: { matched: string[]; missing: string[] };
+}
+
+export interface TailorChoices {
+  selectedProjects: string[];
+  reorderSkills: boolean;
+}
+
 export interface GitHubRepo {
   name: string;
   description?: string | null;

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- normalizeResumeData receives untyped AI JSON */
-import type { ResumeData, Skills, TailorDiffItem } from './types';
+import type { ResumeData, Skills, TailorChoices, TailorDiffItem, TailorInsights } from './types';
 
 type TailoredEntry = { name?: string; company?: string; bullets?: string[]; reasons?: string[] };
 type TailoredResume = Omit<Partial<ResumeData>, 'projects' | 'experience'> & {
@@ -218,3 +218,57 @@ export const normalizeResumeData = (data: any, allowedProjectNames?: string[]): 
 // so saved versions that share the old objects stay intact.
 export const patchAt = <T,>(list: T[], index: number, change: Partial<T>): T[] =>
   list.map((item, i) => (i === index ? { ...item, ...change } : item));
+
+const stringsOf = (val: any): string[] => (Array.isArray(val) ? val.filter((v: any) => typeof v === 'string') : []);
+
+const copySkills = (skills: Skills): Skills => ({
+  languages: [...skills.languages],
+  frameworks: [...skills.frameworks],
+  tools: [...skills.tools],
+});
+
+// Keeps only what the resume already has. The AI may reorder items, never add them.
+export const readTailorInsights = (resume: ResumeData, raw: any): TailorInsights => {
+  const projectNames = resume.projects.map((p) => p.name);
+  const picked: string[] = [];
+  stringsOf(raw.relevant_projects).forEach((wanted) => {
+    const match = projectNames.find((n) => n.toLowerCase() === wanted.toLowerCase());
+    if (match && !picked.includes(match)) picked.push(match);
+  });
+
+  const orderedSkills = (key: keyof Skills): string[] => {
+    const all = resume.skills[key] || [];
+    const suggested: string[] = [];
+    stringsOf(raw.skills?.[key]).forEach((s) => {
+      if (all.includes(s) && !suggested.includes(s)) suggested.push(s);
+    });
+    return [...suggested, ...all.filter((s) => !suggested.includes(s))];
+  };
+
+  return {
+    targetRole: typeof raw.target_role === 'string' && raw.target_role.trim() ? raw.target_role.trim() : 'this role',
+    relevantProjects: [...picked, ...projectNames.filter((n) => !picked.includes(n))],
+    skills: {
+      languages: orderedSkills('languages'),
+      frameworks: orderedSkills('frameworks'),
+      tools: orderedSkills('tools'),
+    },
+    keywords: {
+      matched: stringsOf(raw.keywords?.matched),
+      missing: stringsOf(raw.keywords?.missing),
+    },
+  };
+};
+
+// Pure: returns a new resume. Selected projects come first and are shown; the rest are hidden.
+export const applyTailorInsights = (resume: ResumeData, insights: TailorInsights, choices: TailorChoices): ResumeData => {
+  const picked = insights.relevantProjects.filter((n) => choices.selectedProjects.includes(n));
+  const shown = picked.flatMap((name) => resume.projects.filter((p) => p.name === name).map((p) => ({ ...p, hidden: false })));
+  const hidden = resume.projects.filter((p) => !picked.includes(p.name)).map((p) => ({ ...p, hidden: true }));
+
+  return {
+    ...resume,
+    projects: [...shown, ...hidden],
+    skills: choices.reorderSkills ? copySkills(insights.skills) : copySkills(resume.skills),
+  };
+};

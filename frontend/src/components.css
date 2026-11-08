@@ -816,3 +816,12 @@
   font-size: var(--step--1);
 }
 .preview-hint { margin: 0 0 8px; }
+
+.tailor-block { padding: 0 0 12px; border-bottom: 1px solid var(--margin); margin-bottom: 12px; }
+.tailor-block h5 { margin: 0 0 6px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.kw { font-size: var(--step--1); padding: 1px 8px; border-radius: 999px; border: 1px solid var(--margin); }
+.kw-hit { background: var(--compile-soft); color: var(--ink); border-color: var(--compile); }
+.kw-miss { color: var(--discard); border-color: var(--discard); }
+.tailor-project { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.version-name-input { max-width: 260px; }
