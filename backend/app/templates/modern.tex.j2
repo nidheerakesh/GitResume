@@ -1,0 +1,130 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[a4paper,margin=1.6cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[default]{sourcesanspro}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+
+\definecolor{accent}{HTML}{2B5C8A}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+\titleformat{\section}{\large\bfseries\color{accent}}{}{0em}{}[\vspace{-2pt}\color{accent}\titlerule]
+\titlespacing*{\section}{0pt}{9pt}{4pt}
+\setlist[itemize]{leftmargin=1.2em,itemsep=0pt,topsep=2pt,parsep=0pt}
+
+\begin{document}
+
+%----------HEADING-----------------
+\begin{center}
+    {\LARGE\bfseries << name >>}\\[4pt]
+    \small{
+        <% set contact_parts = [] %>
+        <% if github_username %>
+        <% set _ = contact_parts.append("\\href{https://github.com/" + github_username + "}{github.com/" + github_username + "}") %>
+        <% endif %>
+        <% if linkedin_username %>
+        <% set _ = contact_parts.append("\\href{https://www.linkedin.com/in/" + linkedin_username + "/}{linkedin.com/in/" + linkedin_username + "}") %>
+        <% endif %>
+        <% if email %>
+        <% set _ = contact_parts.append("\\href{mailto:" + email + "}{" + email + "}") %>
+        <% endif %>
+        <% if phone %>
+        <% set _ = contact_parts.append(phone) %>
+        <% endif %>
+        <% if website %>
+        <% set _ = contact_parts.append("\\href{" + website + "}{" + website + "}") %>
+        <% endif %>
+        << contact_parts | join(' | ') >>
+    }
+\end{center}
+
+<% if summary %>
+%-----------SUMMARY-----------------
+\section{Summary}
+<< summary >>
+<% endif %>
+
+<% if experience %>
+%-----------EXPERIENCE-----------------
+\section{Experience}
+<% for job in experience %>
+\noindent\textbf{<< job.title >>}<% if job.start_date or job.end_date %> \hfill << job.start_date >> -- << job.end_date >><% endif %>\\
+\textit{<< job.company >>}<% if job.location %>, << job.location >><% endif %>
+<% if job.bullets %>
+\begin{itemize}
+<% for bullet in job.bullets %>
+\item << bullet >>
+<% endfor %>
+\end{itemize}
+<% endif %>
+<% endfor %>
+<% endif %>
+
+<% set visible_projects = projects | rejectattr('hidden') | list %>
+<% if visible_projects %>
+%-----------PROJECTS-----------------
+\section{Projects}
+<% for project in visible_projects %>
+\noindent\textbf{<< project.name >>}<% if project.tech %> \textbar{} << project.tech | join(', ') >><% endif %><% if project.start_date or project.end_date %> \hfill << project.start_date >> -- << project.end_date >><% endif %><% if project.url %>\\
+\href{<< project.url >>}{<< project.url >>}<% endif %>
+<% if project.bullets %>
+\begin{itemize}
+<% for bullet in project.bullets %>
+\item << bullet >>
+<% endfor %>
+\end{itemize}
+<% endif %>
+<% endfor %>
+<% endif %>
+
+<% if education %>
+%-----------EDUCATION-----------------
+\section{Education}
+<% for edu in education %>
+\noindent\textbf{<< edu.school >>}<% if edu.start_date or edu.end_date %> \hfill << edu.start_date >> -- << edu.end_date >><% endif %>\\
+<< edu.degree >><% if edu.gpa %>, GPA: << edu.gpa >><% endif %>
+<% endfor %>
+<% endif %>
+
+<% if skills.languages or skills.frameworks or skills.tools %>
+%-----------SKILLS-----------------
+\section{Skills}
+<% if skills.languages %>\textbf{Languages:} << skills.languages | join(', ') >>\\<% endif %>
+<% if skills.frameworks %>\textbf{Frameworks:} << skills.frameworks | join(', ') >>\\<% endif %>
+<% if skills.tools %>\textbf{Tools:} << skills.tools | join(', ') >><% endif %>
+<% endif %>
+
+<% if coursework and (coursework.cs or coursework.math) %>
+%-----------COURSEWORK-----------------
+\section{Relevant Coursework}
+<% if coursework.cs %>\textbf{Computer Science:} << coursework.cs >>\\<% endif %>
+<% if coursework.math %>\textbf{Mathematics:} << coursework.math >><% endif %>
+<% endif %>
+
+<% if achievements %>
+%-----------ACHIEVEMENTS-----------------
+\section{Achievements}
+\begin{itemize}
+<% for ach in achievements %>
+\item \textbf{<< ach.title >>}<% if ach.description %>: << ach.description >><% endif %><% if ach.year %> (<< ach.year >>)<% endif %>
+<% endfor %>
+\end{itemize}
+<% endif %>
+
+<% if positions %>
+%-----------POSITIONS OF RESPONSIBILITY-----------------
+\section{Positions of Responsibility}
+\begin{itemize}
+<% for por in positions %>
+\item \textbf{<< por.title >>}<% if por.description %>: << por.description >><% endif %><% if por.year %> (<< por.year >>)<% endif %>
+<% endfor %>
+\end{itemize}
+<% endif %>
+
+\end{document}
