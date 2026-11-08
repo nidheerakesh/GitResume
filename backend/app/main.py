@@ -8,10 +8,11 @@ if backend_dir not in sys.path:
     sys.path.append(backend_dir)
 
 from app.github import GitHubAnalyzer
-from app.resume import generate_resume_latex
+from app.resume import generate_resume_latex, TEMPLATES, DEFAULT_TEMPLATE
+from app.pdf import compile_pdf, find_tectonic, LatexCompileError
 from app.ai import ResumeTailor
 
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
@@ -62,6 +63,12 @@ class TailorResumeRequest(BaseModel):
 
 class CompileResumeRequest(BaseModel):
     resume_data: Dict[str, Any]
+    template: Optional[str] = DEFAULT_TEMPLATE
+
+class PdfRequest(BaseModel):
+    resume_data: Optional[Dict[str, Any]] = None
+    template: Optional[str] = DEFAULT_TEMPLATE
+    latex: Optional[str] = None
 
 class ParseResumeRequest(BaseModel):
     text: str
@@ -97,7 +104,7 @@ def health_check():
 async def get_github_profile(username: str, token: Optional[str] = None):
     """
     Fetches the public profile, top repos, languages, and skills of a GitHub user.
-    (Legacy GET endpoint — token via query param, kept for backward compatibility.)
+    (Legacy GET endpoint: token via query param, kept for backward compatibility.)
     """
     if not username or username.strip() == "":
         raise HTTPException(status_code=400, detail="Username is required")
@@ -216,13 +223,38 @@ def compile_resume(req: CompileResumeRequest):
     Compiles the structural resume data into clean, downloadable LaTeX source code.
     """
     try:
-        latex_code = generate_resume_latex(req.resume_data)
+        latex_code = generate_resume_latex(req.resume_data, req.template or DEFAULT_TEMPLATE)
         return {
             "latex": latex_code,
             "filename": f"resume_{req.resume_data.get('name', 'candidate').lower().replace(' ', '_')}.tex"
         }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=sanitize_error(str(e)))
+
+@app.get("/api/templates")
+def list_templates():
+    return {"templates": TEMPLATES, "default": DEFAULT_TEMPLATE, "pdf_available": find_tectonic() is not None}
+
+@app.post("/api/resume/pdf")
+def resume_pdf(req: PdfRequest):
+    if req.latex and req.latex.strip():
+        latex_code = req.latex
+    elif req.resume_data is not None:
+        try:
+            latex_code = generate_resume_latex(req.resume_data, req.template or DEFAULT_TEMPLATE)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        raise HTTPException(status_code=400, detail="Send resume_data or latex.")
+    try:
+        pdf = compile_pdf(latex_code)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except LatexCompileError as e:
+        raise HTTPException(status_code=422, detail={"message": str(e), "log": e.log})
+    return Response(content=pdf, media_type="application/pdf", headers={"Content-Disposition": "inline; filename=resume.pdf"})
 
 @app.post("/api/resume/chat")
 def chat_resume(req: ChatResumeRequest):
@@ -255,12 +287,16 @@ def chat_resume(req: ChatResumeRequest):
         }
         
         import requests
+        if not tailor.url:
+            raise HTTPException(status_code=400, detail="Add an AI API key in settings to use the career coach.")
         res = requests.post(tailor.url, headers=tailor.headers, json=payload, timeout=30)
         if res.status_code == 200:
             content = res.json()["choices"][0]["message"]["content"]
             return {"response": content}
         else:
             raise HTTPException(status_code=res.status_code, detail=f"Groq API call failed: {res.text}")
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         traceback.print_exc()

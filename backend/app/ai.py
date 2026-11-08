@@ -1,7 +1,67 @@
 import os
 import json
+import re
 import requests
 from typing import Dict, List, Any
+
+def _mentions(term: str, text_lower: str) -> bool:
+    t = term.strip().lower()
+    if not t:
+        return False
+    return re.search(r"(?<![a-z0-9])" + re.escape(t) + r"(?![a-z0-9])", text_lower) is not None
+
+
+def _resume_terms(data: dict) -> list:
+    skills = data.get("skills", {}) or {}
+    terms = []
+    for key in ("languages", "frameworks", "tools"):
+        terms += skills.get(key, []) or []
+    for p in data.get("projects", []) or []:
+        terms += p.get("tech", []) or []
+    seen, out = set(), []
+    for t in terms:
+        if isinstance(t, str) and t.strip() and t.lower() not in seen:
+            seen.add(t.lower())
+            out.append(t.strip())
+    return out
+
+
+def _reorder_skills(skills: dict, jd_lower: str) -> dict:
+    out = {}
+    for key in ("languages", "frameworks", "tools"):
+        items = list((skills or {}).get(key, []) or [])
+        out[key] = sorted(items, key=lambda s: not _mentions(s, jd_lower))
+    return out
+
+
+def _rank_projects(projects: list, jd_lower: str, preferred: list = None) -> list:
+    names = [p.get("name", "") for p in projects or [] if p.get("name")]
+    lower_map = {n.lower(): n for n in names}
+    ranked = []
+    for n in preferred or []:
+        if isinstance(n, str) and n.lower() in lower_map and lower_map[n.lower()] not in ranked:
+            ranked.append(lower_map[n.lower()])
+
+    def score(p):
+        terms = (p.get("tech", []) or []) + re.findall(r"[A-Za-z0-9+#.]+", p.get("name", ""))
+        terms += re.findall(r"[A-Za-z0-9+#.]{4,}", " ".join(p.get("bullets", []) or []))
+        return sum(1 for t in terms if _mentions(t, jd_lower))
+
+    rest = sorted([p for p in projects or [] if p.get("name") and p.get("name") not in ranked], key=score, reverse=True)
+    return ranked + [p.get("name") for p in rest]
+
+
+def _match_keywords(data: dict, jd_lower: str, extra_missing: list = None, vocab: list = None) -> dict:
+    terms = _resume_terms(data)
+    have = {t.lower() for t in terms}
+    matched = [t for t in terms if _mentions(t, jd_lower)]
+    missing = []
+    for k in (extra_missing or []) + (vocab or []):
+        if isinstance(k, str) and k.strip() and k.lower() not in have and k.lower() not in {m.lower() for m in missing}:
+            if extra_missing and k in extra_missing or _mentions(k, jd_lower):
+                missing.append(k.strip())
+    return {"matched": matched, "missing": missing}
+
 
 class ResumeTailor:
     def __init__(self, api_key: str = None, groq_api_key: str = None, openrouter_api_key: str = None):
@@ -745,11 +805,14 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                 3. ENRICHMENT OVER INVENTION: Inject relevant tech stack keywords and ATS verbs from the job description ONLY where they naturally complement and accurately reflect the existing project domain (e.g., specifying React/TypeScript for a frontend project, or SQL/FastAPI/REST APIs for a backend system if the project uses them).
                 4. Keep the exact same number of bullet points and projects in the same order.
                 5. EXPLAIN YOUR CHANGES: For the summary and for EACH rewritten bullet point, provide a short, 1-sentence explanation of WHY this change was made (e.g. "Injected React and TypeScript keywords to match job requirements"). Add these as a parallel list under a "reasons" key for projects and experience, and a "summary_reason" key at the root.
+                Never add skills, tools, employers, projects, numbers or metrics that are not in the original resume.
+                Only reword existing bullets; keep the same number of bullets per entry.
 
                 Return ONLY a JSON object with matching structure:
                 {{
                   "summary": "new tailored summary",
                   "summary_reason": "justification for summary optimization",
+                  "target_role": "job title from the job description",
                   "experience": [
                      {{ 
                        "title": "job title", 
@@ -768,7 +831,9 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                        "bullets": ["tailored bullet 1", "tailored bullet 2"],
                        "reasons": ["reason for bullet 1 change", "reason for bullet 2 change"]
                      }}
-                  ]
+                  ],
+                  "relevant_projects": ["project names copied exactly from the input, most relevant first"],
+                  "missing_keywords": ["important skills or tools the job asks for that do NOT appear anywhere in the resume"]
                 }}
                 Do not wrap in markdown ```json, return raw JSON string.
                 """
@@ -805,7 +870,11 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
                         merged_data["experience"] = tailored_res["experience"]
                     if "projects" in tailored_res and len(tailored_res["projects"]) == len(original_data.get("projects", [])):
                         merged_data["projects"] = tailored_res["projects"]
-                        
+                    merged_data["target_role"] = tailored_res.get("target_role") or detected_role
+                    merged_data["relevant_projects"] = _rank_projects(original_data.get("projects", []), job_lower, tailored_res.get("relevant_projects"))
+                    merged_data["skills"] = _reorder_skills(original_data.get("skills", {}), job_lower)
+                    merged_data["keywords"] = _match_keywords(original_data, job_lower, tailored_res.get("missing_keywords"), job_keywords)
+
                     return merged_data
                 else:
                     error_detail = f"AI Tailoring API call failed with status {res.status_code}: {res.text}"
@@ -833,41 +902,10 @@ Ensure all fields are fully synthesized, human-sounding, technically authentic t
             detected_role
         )
 
-        # Highlight matching keywords in project bullets
-        if "projects" in tailored_data:
-            new_projects = []
-            for project in tailored_data["projects"]:
-                p_copy = project.copy()
-                p_techs = [t.lower() for t in p_copy.get("tech", [])]
-                matched_in_project = [kw for kw in job_keywords if kw.lower() in p_techs]
-                
-                # Create tailored highlights
-                bullets = []
-                if matched_in_project:
-                    bullets.append(f"Architected and deployed full-lifecycle solutions highlighting robust engineering integrations with {', '.join(matched_in_project)}.")
-                else:
-                    bullets.append(f"Developed high performance modular components optimizing local deployment workflows and latency.")
-                
-                bullets.append(f"Implemented core backend logic and database structures, resulting in optimized data flows, higher test coverage, and faster response times.")
-                bullets.append(f"Managed version control, release lifecycles, and open-source contributions with robust Git guidelines.")
-                
-                p_copy["bullets"] = bullets
-                new_projects.append(p_copy)
-            tailored_data["projects"] = new_projects
-
-        # Highlight matching keywords in experience bullets
-        if "experience" in tailored_data:
-            new_exp = []
-            for job in tailored_data["experience"]:
-                j_copy = job.copy()
-                bullets = [
-                    f"Spearheaded technical development for scalable applications as a lead contributor, driving feature development from definition to production.",
-                    f"Collaborated on agile cross-functional engineering squads prioritizing robust systems performance, code reviews, and comprehensive automated testing.",
-                    f"Refactored legacy modules to leverage modern design principles, reducing maintenance overhead and boosting overall performance."
-                ]
-                j_copy["bullets"] = bullets
-                new_exp.append(j_copy)
-            tailored_data["experience"] = new_exp
+        tailored_data["target_role"] = detected_role
+        tailored_data["relevant_projects"] = _rank_projects(original_data.get("projects", []), job_lower)
+        tailored_data["skills"] = _reorder_skills(original_data.get("skills", {}), job_lower)
+        tailored_data["keywords"] = _match_keywords(original_data, job_lower, None, job_keywords)
 
         return tailored_data
 

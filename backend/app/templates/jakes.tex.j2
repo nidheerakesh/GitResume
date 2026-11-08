@@ -1,0 +1,185 @@
+% Based on Jake's Resume by Jake Gutierrez (MIT license)
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[T1]{fontenc}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+\newcommand{\resumeItem}[1]{
+  \item\small{#1 \vspace{-2pt}}
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.15in]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+\begin{document}
+
+%----------HEADING-----------------
+\begin{center}
+    {\Huge \scshape << name >>} \\ \vspace{1pt}
+    <% set contact_parts = [] %>
+    <% if phone %>
+    <% set _ = contact_parts.append("\\small " + phone) %>
+    <% endif %>
+    <% if email %>
+    <% set _ = contact_parts.append("\\href{mailto:" + email + "}{\\underline{" + email + "}}") %>
+    <% endif %>
+    <% if linkedin_username %>
+    <% set _ = contact_parts.append("\\href{https://www.linkedin.com/in/" + linkedin_username + "}{\\underline{linkedin.com/in/" + linkedin_username + "}}") %>
+    <% endif %>
+    <% if github_username %>
+    <% set _ = contact_parts.append("\\href{https://github.com/" + github_username + "}{\\underline{github.com/" + github_username + "}}") %>
+    <% endif %>
+    << contact_parts | join(' $|$ ') >>
+\end{center}
+
+<% if summary %>
+\section{Summary}
+\small{<< summary >>}
+<% endif %>
+
+<% if education %>
+%-----------EDUCATION-----------------
+\section{Education}
+\resumeSubHeadingListStart
+<% for edu in education %>
+\resumeSubheading
+{<< edu.school >>}{<< edu.start_date >> -- << edu.end_date >>}
+{<< edu.degree >>}{<% if edu.gpa %>GPA: << edu.gpa >><% endif %>}
+<% endfor %>
+\resumeSubHeadingListEnd
+<% endif %>
+
+<% if experience %>
+%-----------EXPERIENCE-----------------
+\section{Experience}
+\resumeSubHeadingListStart
+<% for job in experience %>
+\resumeSubheading
+{<< job.title >>}{<< job.start_date >> -- << job.end_date >>}
+{<< job.company >>}{<% if job.location %><< job.location >><% endif %>}
+<% if job.bullets %>
+\resumeItemListStart
+<% for bullet in job.bullets %>
+\resumeItem{<< bullet >>}
+<% endfor %>
+\resumeItemListEnd
+<% endif %>
+<% endfor %>
+\resumeSubHeadingListEnd
+<% endif %>
+
+<% if projects %>
+%-----------PROJECTS-----------------
+\section{Projects}
+\resumeSubHeadingListStart
+<% for project in projects if not project.hidden %>
+\resumeProjectHeading
+{\textbf{<< project.name >>}<% if project.tech %> $|$ \emph{<< project.tech | join(', ') >>}<% endif %>}{<% if project.start_date %><< project.start_date >><% if project.end_date %> -- << project.end_date >><% endif %><% endif %>}
+<% if project.bullets %>
+\resumeItemListStart
+<% for bullet in project.bullets %>
+\resumeItem{<< bullet >>}
+<% endfor %>
+\resumeItemListEnd
+<% endif %>
+<% endfor %>
+\resumeSubHeadingListEnd
+<% endif %>
+
+<% if achievements %>
+%-----------ACHIEVEMENTS-----------------
+\section{Achievements}
+\resumeSubHeadingListStart
+<% for ach in achievements %>
+\resumeItem{\textbf{<< ach.title >>}<% if ach.description %> -- << ach.description >><% endif %><% if ach.year %> (<< ach.year >>)<% endif %>}
+<% endfor %>
+\resumeSubHeadingListEnd
+<% endif %>
+
+<% if skills.languages or skills.frameworks or skills.tools %>
+%-----------TECHNICAL SKILLS-----------------
+\section{Technical Skills}
+\resumeSubHeadingListStart
+<% if skills.languages %>
+\resumeItem{\textbf{Languages:} << skills.languages | join(', ') >>}
+<% endif %>
+<% if skills.frameworks %>
+\resumeItem{\textbf{Frameworks:} << skills.frameworks | join(', ') >>}
+<% endif %>
+<% if skills.tools %>
+\resumeItem{\textbf{Developer Tools:} << skills.tools | join(', ') >>}
+<% endif %>
+\resumeSubHeadingListEnd
+<% endif %>
+
+<% if coursework and (coursework.cs or coursework.math) %>
+%-----------COURSEWORK-----------------
+\section{Relevant Coursework}
+\resumeSubHeadingListStart
+<% if coursework.cs %>
+\resumeItem{\textbf{Computer Science:} << coursework.cs >>}
+<% endif %>
+<% if coursework.math %>
+\resumeItem{\textbf{Mathematics:} << coursework.math >>}
+<% endif %>
+\resumeSubHeadingListEnd
+<% endif %>
+
+<% if positions %>
+%-----------POSITIONS OF RESPONSIBILITY-----------------
+\section{Positions of Responsibility}
+\resumeSubHeadingListStart
+<% for por in positions %>
+\resumeSubheading
+{<< por.title >>}{<< por.year >>}
+{<< por.description >>}{}
+<% endfor %>
+\resumeSubHeadingListEnd
+<% endif %>
+
+\end{document}

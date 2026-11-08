@@ -1,0 +1,134 @@
+<% macro span(start, end) %><% if start and end %><< start >> -- << end >><% elif start %><< start >><% elif end %><< end >><% endif %><% endmacro %>
+\documentclass[a4paper,10pt]{article}
+\usepackage[margin=1.2cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{paracol}
+\usepackage[hidelinks]{hyperref}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+\titleformat{\section}{\large\scshape\raggedright}{}{0em}{}[\titlerule]
+\titlespacing*{\section}{0pt}{6pt}{3pt}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE\textbf{<< name >>}}\\[3pt]
+    <% set contact_parts = [] %>
+    <% if github_username %>
+    <% set _ = contact_parts.append("\\href{https://github.com/" + github_username + "}{github.com/" + github_username + "}") %>
+    <% endif %>
+    <% if linkedin_username %>
+    <% set _ = contact_parts.append("\\href{https://www.linkedin.com/in/" + linkedin_username + "/}{linkedin.com/in/" + linkedin_username + "}") %>
+    <% endif %>
+    <% if email %>
+    <% set _ = contact_parts.append("\\href{mailto:" + email + "}{" + email + "}") %>
+    <% endif %>
+    <% if phone %>
+    <% set _ = contact_parts.append(phone) %>
+    <% endif %>
+    <% if website %>
+    <% set _ = contact_parts.append("\\href{" + website + "}{" + website + "}") %>
+    <% endif %>
+    << contact_parts | join(' | ') >>
+    <% if course or roll %>
+
+    \small << course >><% if course and roll %> | <% endif %><% if roll %>Roll No. << roll >><% endif %>
+    <% endif %>
+\end{center}
+
+\columnratio{0.32}
+\begin{paracol}{2}
+\raggedright
+
+<% if skills.languages or skills.frameworks or skills.tools %>
+\section{Skills}
+<% if skills.languages %>
+\textbf{Languages:} << skills.languages | join(', ') >>\par
+<% endif %>
+<% if skills.frameworks %>
+\textbf{Frameworks:} << skills.frameworks | join(', ') >>\par
+<% endif %>
+<% if skills.tools %>
+\textbf{Tools:} << skills.tools | join(', ') >>\par
+<% endif %>
+<% endif %>
+
+<% if education %>
+\section{Education}
+<% for edu in education %>
+\noindent\textbf{<< edu.school >>}\\
+<< edu.degree >>\\ {\itshape << span(edu.start_date, edu.end_date) >>}
+<% if edu.gpa %>\\GPA: << edu.gpa >><% endif %>\par
+<% endfor %>
+<% endif %>
+
+<% if achievements %>
+\section{Achievements}
+<% for ach in achievements %>
+\textbf{<< ach.title >>}<% if ach.year %> (<< ach.year >>)<% endif %><% if ach.description %>: << ach.description >><% endif %>\par
+<% endfor %>
+<% endif %>
+
+<% if coursework and (coursework.cs or coursework.math) %>
+\section{Coursework}
+<% if coursework.cs %>
+\textbf{CS:} << coursework.cs >>\par
+<% endif %>
+<% if coursework.math %>
+\textbf{Math:} << coursework.math >>\par
+<% endif %>
+<% endif %>
+
+\switchcolumn
+\raggedright
+
+<% if summary %>
+\section{Summary}
+<< summary >>
+<% endif %>
+
+<% if experience %>
+\section{Experience}
+<% for job in experience %>
+\noindent\textbf{<< job.title >>}\hfill << span(job.start_date, job.end_date) >>\\
+\textit{<< job.company >>}<% if job.location %>, << job.location >><% endif %>
+<% if job.bullets %>
+\begin{itemize}[leftmargin=1.2em,itemsep=0pt,topsep=2pt,parsep=0pt]
+<% for bullet in job.bullets %>
+\item << bullet >>
+<% endfor %>
+\end{itemize}
+<% endif %>
+<% endfor %>
+<% endif %>
+
+<% set shown_projects = projects | rejectattr('hidden') | list %>
+<% if shown_projects %>
+\section{Projects}
+<% for project in shown_projects %>
+\noindent\textbf{<< project.name >>}<% if project.url %> \textbar{} \href{<< project.url >>}{link}<% endif %><% if project.tech %> | << project.tech | join(', ') >><% endif %>\hfill << span(project.start_date, project.end_date) >>
+<% if project.bullets %>
+\begin{itemize}[leftmargin=1.2em,itemsep=0pt,topsep=2pt,parsep=0pt]
+<% for bullet in project.bullets %>
+\item << bullet >>
+<% endfor %>
+\end{itemize}
+<% endif %>
+<% endfor %>
+<% endif %>
+
+<% if positions %>
+\section{Positions}
+<% for por in positions %>
+\textbf{<< por.title >>}<% if por.year %> (<< por.year >>)<% endif %><% if por.description %>: << por.description >><% endif %>\par
+<% endfor %>
+<% endif %>
+\end{paracol}
+
+\end{document}
