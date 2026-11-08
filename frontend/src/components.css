@@ -86,6 +86,7 @@
 .note-accent { border-left-color: var(--compile); }
 .note-accent p { color: var(--ink); }
 .note-info { border-left-color: var(--margin); }
+.note-error { border-left-color: var(--discard); color: var(--ink); }
 .note-title { display: flex; align-items: center; gap: 0.45rem; font-weight: 600; color: var(--ink); }
 
 /* ---------- Chips and pills ---------- */
