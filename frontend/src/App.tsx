@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react';
 import { History, Moon, Sun } from 'lucide-react';
 import logoImg from './assets/logo.png';
-import { API_BASE_URL, readError } from './api';
+import { API_BASE_URL, fetchPdf, fetchTemplates, readError, saveBlob } from './api';
 import type {
   ChatMessage,
   GitHubAnalysis,
+  PreviewMode,
   ProjectItem,
   ResumeData,
   SavedVersion,
   Skills,
   Tab,
   TailorDiffItem,
+  TemplateInfo,
 } from './types';
 import {
   applyAcceptedDiffs,
@@ -21,6 +23,7 @@ import { LoginCard } from './components/LoginCard';
 import { Portal } from './components/Portal';
 import { EditorPanel } from './components/EditorPanel';
 import { ResumePreview } from './components/ResumePreview';
+import { usePdfPreview } from './components/usePdfPreview';
 import { CareerChat } from './components/CareerChat';
 import { TailorReviewModal, VersionsModal } from './components/Modals';
 import type { RepoView } from './components/portal/RepoCuration';
@@ -38,6 +41,7 @@ const VERSIONS_KEY = 'gitresume_versions';
 const messageOf = (err: unknown, fallback: string) => (err instanceof Error && err.message) || fallback;
 
 const THEME_KEY = 'gitresume_theme';
+const TEMPLATE_KEY = 'gitresume_template';
 type Theme = 'light' | 'dark';
 
 // Stored choice wins. Otherwise follow the system setting.
@@ -79,6 +83,12 @@ function App() {
   const [activeTab, setActiveTab] = useState<Tab>('header');
   const [latexCode, setLatexCode] = useState('');
   const [isCompiling, setIsCompiling] = useState(false);
+  const [templateId, setTemplateId] = useState<string>(() => {
+    try { return localStorage.getItem(TEMPLATE_KEY) || 'iit'; } catch { return 'iit'; }
+  });
+  const [templates, setTemplates] = useState<TemplateInfo[]>([{ id: 'iit', name: 'IIT style', description: '' }]);
+  const [pdfAvailable, setPdfAvailable] = useState(false);
+  const [previewMode, setPreviewMode] = useState<PreviewMode>('pdf');
 
   // AI Tailor States
   const [jobDescription, setJobDescription] = useState('');
@@ -182,7 +192,7 @@ function App() {
       const res = await fetch(`${API_BASE_URL}/resume/compile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resume_data: data })
+        body: JSON.stringify({ resume_data: data, template: templateId })
       });
       if (res.ok) {
         const payload = await res.json();
@@ -200,7 +210,23 @@ function App() {
     if (!resumeData) return;
     const timer = setTimeout(() => compileLatexSource(resumeData), 400);
     return () => clearTimeout(timer);
-  }, [resumeData]);
+  }, [resumeData, templateId]);
+
+  useEffect(() => {
+    fetchTemplates()
+      .then((list) => {
+        setTemplates(list.templates);
+        setPdfAvailable(list.pdf_available);
+      })
+      .catch(() => setPdfAvailable(false));
+  }, []);
+
+  const changeTemplate = (id: string) => {
+    setTemplateId(id);
+    try { localStorage.setItem(TEMPLATE_KEY, id); } catch { /* storage blocked */ }
+  };
+
+  const { state: pdfState, compileLatex } = usePdfPreview(resumeData, templateId, pdfAvailable);
 
   // Save & Enter Workspace Login
   const handleEnterWorkspace = (e: FormEvent) => {
@@ -612,8 +638,20 @@ function App() {
   };
 
   // Download ATS PDF (Calls print engine)
-  const downloadPDF = () => {
-    window.print();
+  const downloadPDF = async () => {
+    if (!resumeData) return;
+    if (!pdfAvailable) {
+      window.print();
+      return;
+    }
+    try {
+      const blob = pdfState.isCustom
+        ? await fetchPdf({ latex: latexCode })
+        : await fetchPdf({ resume_data: resumeData, template: templateId });
+      saveBlob(blob, `resume_${resumeData.name.toLowerCase().replace(/\s+/g, '_') || 'candidate'}.pdf`);
+    } catch (err) {
+      notify(messageOf(err, 'PDF download failed.'), 'error');
+    }
   };
 
   // Handle live editing updates
@@ -687,6 +725,8 @@ function App() {
     isCompiling,
     onRecompile: () => compileLatexSource(resumeData as ResumeData),
     onCopy: copyLatexSource,
+    onCompileEdits: () => { setPreviewMode('pdf'); compileLatex(latexCode); },
+    canCompileEdits: pdfAvailable,
   };
 
   return (
@@ -760,8 +800,18 @@ function App() {
             latex={latexState}
             onDownloadPdf={downloadPDF}
             onDownloadLatex={downloadLatexFile}
+            pdfAvailable={pdfAvailable}
           />
-          <ResumePreview resume={resumeData} buildId={buildId} />
+          <ResumePreview
+            resume={resumeData}
+            buildId={buildId}
+            templates={templates}
+            templateId={templateId}
+            onTemplateChange={changeTemplate}
+            mode={previewMode}
+            onModeChange={setPreviewMode}
+            pdf={pdfState}
+          />
         </main>
       )}
 

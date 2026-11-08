@@ -38,6 +38,8 @@ export interface LatexState {
   isCompiling: boolean;
   onRecompile: () => void;
   onCopy: () => void;
+  onCompileEdits: () => void;
+  canCompileEdits: boolean;
 }
 
 interface EditorPanelProps {
@@ -52,6 +54,7 @@ interface EditorPanelProps {
   latex: LatexState;
   onDownloadPdf: () => void;
   onDownloadLatex: () => void;
+  pdfAvailable: boolean;
 }
 
 export function EditorPanel({
@@ -66,6 +69,7 @@ export function EditorPanel({
   latex,
   onDownloadPdf,
   onDownloadLatex,
+  pdfAvailable,
 }: EditorPanelProps) {
   const renderTab = () => {
     switch (activeTab) {
@@ -103,6 +107,8 @@ export function EditorPanel({
             isCompiling={latex.isCompiling}
             onRecompile={latex.onRecompile}
             onCopy={latex.onCopy}
+            onCompileEdits={latex.onCompileEdits}
+            canCompileEdits={latex.canCompileEdits}
           />
         );
     }
@@ -114,7 +120,7 @@ export function EditorPanel({
         <h2>Editor</h2>
         <div className="row row-tight">
           <button className="btn btn-primary btn-sm" onClick={onDownloadPdf}>
-            <Download size={16} /> Print to PDF
+            <Download size={16} /> {pdfAvailable ? 'Download PDF' : 'Print to PDF'}
           </button>
           <button className="btn btn-secondary btn-sm" onClick={onDownloadLatex}>
             <FileText size={16} /> Download .tex
