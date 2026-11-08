@@ -1,0 +1,185 @@
+{
+  "username": "nidheerakesh",
+  "repos": [
+    {
+      "name": "APKSentinel",
+      "html_url": "https://github.com/nidheerakesh/APKSentinel",
+      "default_branch": "main",
+      "description": "Static analysis and graph attention network that labels Android APKs as benign, suspicious, or malicious, with explanations.",
+      "languages": {
+        "Python": 111192
+      },
+      "dependencies_detected": [],
+      "readme_first_sentence": "APKSentinel reads an Android APK, extracts evidence with four static analysis agents, turns that evidence into a graph, and labels the app as BENIGN, SUSPICIOUS",
+      "readme_url": "https://github.com/nidheerakesh/APKSentinel/blob/main/README.md",
+      "commit_messages_used": [
+        "Merge pull request #1 from nidheerakesh/claude/beautify-github-readme-6d7046",
+        "Add project README with SVG hero and pipeline visuals"
+      ],
+      "commit_urls": {
+        "Merge pull request #1 from nidheerakesh/claude/beautify-github-readme-6d7046": "https://github.com/nidheerakesh/APKSentinel/commit/0d314ed5a2daeae50dc1cfb4698933a41ddd68c9",
+        "Add project README with SVG hero and pipeline visuals": "https://github.com/nidheerakesh/APKSentinel/commit/062119bbae5ce420d3791d48a031d4e168b829ed"
+      }
+    },
+    {
+      "name": "GitResume",
+      "html_url": "https://github.com/nidheerakesh/GitResume",
+      "default_branch": "main",
+      "description": "",
+      "languages": {
+        "Python": 13882643,
+        "TypeScript": 118874,
+        "CSS": 39693,
+        "Jinja": 21289,
+        "PowerShell": 9033,
+        "JavaScript": 7945,
+        "Roff": 7581,
+        "C": 4327,
+        "Shell": 4080,
+        "HTML": 1710,
+        "Dockerfile": 874,
+        "Go Template": 356
+      },
+      "dependencies_detected": [
+        "fastapi",
+        "uvicorn",
+        "pydantic",
+        "requests",
+        "jinja2",
+        "python-dotenv",
+        "openai",
+        "pdfplumber",
+        "python-multipart",
+        "beautifulsoup4",
+        "fastapi",
+        "uvicorn",
+        "pydantic",
+        "requests",
+        "jinja2",
+        "python-dotenv",
+        "openai",
+        "pdfplumber",
+        "python-multipart",
+        "beautifulsoup4",
+        "httpx"
+      ],
+      "readme_first_sentence": "**Turn your GitHub projects into ATS-friendly LaTeX resumes.**",
+      "readme_url": "https://github.com/nidheerakesh/GitResume/blob/main/README.md",
+      "commit_messages_used": [
+        "Merge pull request #1 from nidheerakesh/claude/cleanup-ui-beautify-9baf54",
+        "merge e8"
+      ],
+      "commit_urls": {
+        "Merge pull request #1 from nidheerakesh/claude/cleanup-ui-beautify-9baf54": "https://github.com/nidheerakesh/GitResume/commit/461630d37e05de14f37b3ac323d5131589d287c2",
+        "merge e8": "https://github.com/nidheerakesh/GitResume/commit/f0c38f53d18b907e7b81f75502a220e238c81c70"
+      }
+    },
+    {
+      "name": "loom",
+      "html_url": "https://github.com/nidheerakesh/loom",
+      "default_branch": "main",
+      "description": "Two-sided AI marketplace that routes work to women's self-help group members, with match explanations in spoken Malayalam.",
+      "languages": {
+        "TypeScript": 595339,
+        "JavaScript": 83212,
+        "HTML": 10205,
+        "CSS": 7691
+      },
+      "dependencies_detected": [
+        "@radix-ui/react-dialog",
+        "@radix-ui/react-dropdown-menu",
+        "@radix-ui/react-icons",
+        "@radix-ui/react-slot",
+        "@radix-ui/react-toggle",
+        "@radix-ui/react-toggle-group",
+        "@supabase/supabase-js",
+        "@tanstack/react-query",
+        "class-variance-authority",
+        "clsx",
+        "next-themes",
+        "react",
+        "react-dom",
+        "tailwind-merge",
+        "tailwindcss-animate",
+        "zod",
+        "@types/node",
+        "@types/react",
+        "@types/react-dom",
+        "@typescript-eslint/eslint-plugin",
+        "@typescript-eslint/parser",
+        "@vercel/node",
+        "@vitejs/plugin-react",
+        "autoprefixer",
+        "eslint",
+        "eslint-plugin-react-hooks",
+        "eslint-plugin-react-refresh",
+        "postcss",
+        "prettier",
+        "tailwindcss",
+        "tsx",
+        "typescript",
+        "vite"
+      ],
+      "readme_first_sentence": "",
+      "readme_url": null,
+      "commit_messages_used": [
+        "Remove honest status section from landing page",
+        "Add 3-person demo video script (Nidhi, Anjana, Niveditha)"
+      ],
+      "commit_urls": {
+        "Remove honest status section from landing page": "https://github.com/nidheerakesh/loom/commit/3c4cbcae85298fe9195c4e0b7cf9bd202a786119",
+        "Add 3-person demo video script (Nidhi, Anjana, Niveditha)": "https://github.com/nidheerakesh/loom/commit/80ecb289c3ebf5f83d34ee3dbc709df5dc9870b4"
+      }
+    },
+    {
+      "name": "Cybershield",
+      "html_url": "https://github.com/nidheerakesh/Cybershield",
+      "default_branch": "main",
+      "description": "",
+      "languages": {
+        "Python": 76391,
+        "JavaScript": 13404,
+        "CSS": 10344,
+        "Shell": 688,
+        "HTML": 360
+      },
+      "dependencies_detected": [
+        "torch",
+        "torch_geometric",
+        "networkx",
+        "scikit-learn",
+        "xgboost",
+        "numpy",
+        "pandas",
+        "androguard",
+        "fastapi",
+        "uvicorn[standard]",
+        "python-multipart",
+        "aiofiles",
+        "tqdm",
+        "openai",
+        "react",
+        "react-dom",
+        "@eslint/js",
+        "@types/react",
+        "@types/react-dom",
+        "@vitejs/plugin-react",
+        "eslint",
+        "eslint-plugin-react-hooks",
+        "eslint-plugin-react-refresh",
+        "globals",
+        "vite"
+      ],
+      "readme_first_sentence": "**Android Banking Trojan Detector — Reverse Engineering · Graph AI/ML · Swarm Intelligence · GenAI**",
+      "readme_url": "https://github.com/nidheerakesh/Cybershield/blob/main/README.md",
+      "commit_messages_used": [
+        "ui: monochrome terminal aesthetic — black/white, monospace, no colour",
+        "fix: guard .env source in start.sh against missing file"
+      ],
+      "commit_urls": {
+        "ui: monochrome terminal aesthetic — black/white, monospace, no colour": "https://github.com/nidheerakesh/Cybershield/commit/d16862bd4f9fe6988b48b258157f1a7a374cf3c2",
+        "fix: guard .env source in start.sh against missing file": "https://github.com/nidheerakesh/Cybershield/commit/bacc254e3c54ae5cec591daceff7c2137a4c58d9"
+      }
+    }
+  ]
+}

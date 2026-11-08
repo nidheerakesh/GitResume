@@ -1,0 +1,75 @@
+/*
+ * Proof identity, defined once and shared by the landing page and the guide.
+ * Paper, ink and proofreader's red. light-dark() follows color-scheme, which
+ * the theme toggle sets on <html> through data-theme.
+ */
+@font-face {
+  font-family: "Latin Modern Roman";
+  src: url("../assets/fonts/lmroman10-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Latin Modern Roman";
+  src: url("../assets/fonts/lmroman10-italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Latin Modern Roman";
+  src: url("../assets/fonts/lmroman10-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Latin Modern Roman Display";
+  src: url("../assets/fonts/lmroman17-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Latin Modern Roman Caps";
+  src: url("../assets/fonts/lmromancaps10-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+/* Times-metric fallback scaled to Latin Modern's widths, so the swap barely moves text. */
+@font-face {
+  font-family: "LM Fallback";
+  src: local("Times New Roman"), local("Liberation Serif"), local("Tinos");
+  size-adjust: 107.9%;
+  ascent-override: 74.7%;
+  descent-override: 18%;
+  line-gap-override: 0%;
+}
+
+:root {
+  color-scheme: light dark;
+
+  --paper: light-dark(#f4f1ea, #15140f);
+  --sheet: light-dark(#faf8f3, #1b1a14);
+  --ink: light-dark(#1b1b1b, #ece6d8);
+  --ink-2: light-dark(#45433f, #c2bbac);
+  --ink-3: light-dark(#66625b, #948d7f);
+  --rule: light-dark(rgb(27 27 27 / 0.16), rgb(236 230 216 / 0.16));
+  --rule-strong: light-dark(rgb(27 27 27 / 0.6), rgb(236 230 216 / 0.55));
+  --red: light-dark(#b3261e, #e0574c);
+  --red-deep: light-dark(#8f1d17, #f08a80);
+  --red-wash: light-dark(rgb(179 38 30 / 0.07), rgb(224 87 76 / 0.12));
+  --shade: light-dark(#ebe7dd, #201f18);
+
+  --font-serif: "Latin Modern Roman", "LM Fallback", "Times New Roman", serif;
+  --font-display: "Latin Modern Roman Display", "Latin Modern Roman", "LM Fallback", serif;
+  --font-caps: "Latin Modern Roman Caps", "Latin Modern Roman", "LM Fallback", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --ease-pen: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }

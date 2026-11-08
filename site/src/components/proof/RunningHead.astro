@@ -1,0 +1,24 @@
+---
+// Running page header, as printed at the top of a proof page.
+import { cfg, withBase } from "../../lib/source";
+interface Props { folio?: string }
+const { folio = "proof 1 of 1" } = Astro.props;
+---
+
+<header class="rh">
+  <nav class="rh__inner" aria-label="Primary">
+    <a class="rh__name" href={withBase("")}>GitResume</a>
+    <span class="rh__dot" aria-hidden="true">·</span>
+    <a href={withBase("guide/")}>guide</a>
+    <span class="rh__dot" aria-hidden="true">·</span>
+    <a href={cfg.repoUrl} rel="noopener">source</a>
+    <span class="rh__dot rh__wide" aria-hidden="true">·</span>
+    <span class="rh__folio rh__wide">{folio}</span>
+    <span class="rh__end">
+      <button class="rh__theme" type="button" data-theme-toggle aria-label="Switch between day and night proof">
+        <span class="rh__day">day</span><span class="rh__slash" aria-hidden="true">/</span><span class="rh__night">night</span>
+      </button>
+      <a class="rh__app" href={cfg.appUrl} rel="noopener">Open GitResume</a>
+    </span>
+  </nav>
+</header>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="100%" role="img" aria-labelledby="t d">
+  <title id="t">GitResume: your resume, cited from your repos</title>
+  <desc id="d">A printer's proof of a resume. The project bullet "Static analysis and graph attention network that labels Android APKs as benign, suspicious, or malicious, with explanations." has a red margin mark citing the repository description of nidheerakesh/APKSentinel.</desc>
+  <rect width="1200" height="420" rx="14" fill="#F4F1EA"/>
+  <rect x="0.5" y="0.5" width="1199" height="419" rx="14" fill="none" stroke="#1B1B1B" stroke-opacity="0.18"/>
+  <g font-family="'Latin Modern Roman','Computer Modern',Georgia,'Times New Roman',serif" fill="#1B1B1B">
+    <text x="60" y="98" font-size="64" font-weight="700">GitResume</text>
+    <text x="62" y="146" font-size="30" font-style="italic">Your resume, cited from your repos.</text>
+    <line x1="60" y1="190" x2="1140" y2="190" stroke="#1B1B1B" stroke-opacity="0.35"/>
+    <text x="60" y="232" font-size="24" font-variant="small-caps" letter-spacing="2" font-weight="700">PROJECTS</text>
+    <line x1="60" y1="244" x2="720" y2="244" stroke="#1B1B1B" stroke-width="1.5"/>
+    <text x="60" y="284" font-size="24" font-weight="700">APKSentinel</text>
+    <text x="232" y="284" font-size="22" font-style="italic">Python</text>
+    <text x="84" y="326" font-size="22">&#8226;  Static analysis and graph attention network that labels Android</text>
+    <text x="101" y="356" font-size="22">APKs as benign, suspicious, or malicious, with explanations.</text>
+  </g>
+  <g stroke="#B3261E" fill="none" stroke-width="2" stroke-linecap="round">
+    <path d="M 101 366 Q 400 372 686 366" stroke-width="2.5"/>
+    <path d="M 700 348 L 842 348"/>
+    <circle cx="700" cy="348" r="4" fill="#B3261E" stroke="none"/>
+  </g>
+  <g fill="#B3261E">
+    <text x="850" y="318" font-family="'JetBrains Mono','DejaVu Sans Mono',Menlo,Consolas,monospace" font-size="20" font-weight="700">source: description</text>
+    <text x="850" y="346" font-family="'JetBrains Mono','DejaVu Sans Mono',Menlo,Consolas,monospace" font-size="20">nidheerakesh/APKSentinel</text>
+    <text x="850" y="374" font-family="'Latin Modern Roman','Computer Modern',Georgia,serif" font-size="20" font-style="italic">cited, not invented</text>
+  </g>
+</svg>

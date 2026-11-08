@@ -1,0 +1,116 @@
+---
+// The resume, set from GitResume's real output, with proof marks in the margin.
+import Note from "./Note.astro";
+import { cfg } from "../../lib/source";
+import {
+  resume,
+  username,
+  projects,
+  emailNote,
+  summaryNote,
+  achievement,
+  achievementNote,
+  skillsNote,
+  omitted,
+  totalLines,
+} from "../../lib/proof";
+
+const shown = totalLines - omitted;
+const gh = resume.github.replace(/^https?:\/\//, "");
+const date = new Date(`${cfg.captureDate}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+---
+
+<figure class="proof" aria-labelledby="proof-caption" data-proof>
+  <p class="proof__slug" aria-hidden="true">
+    <span>GitResume</span><span>proof 1</span><span>{username}</span><span>{resume.projects.length} repos</span><span>no AI key</span><span>{cfg.captureDate}</span>
+  </p>
+
+  <div class="sheet" data-sheet>
+    <span class="crop crop--tl" aria-hidden="true"></span>
+    <span class="crop crop--tr" aria-hidden="true"></span>
+    <span class="crop crop--bl" aria-hidden="true"></span>
+    <span class="crop crop--br" aria-hidden="true"></span>
+    <svg class="reg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="0.9" />
+      <path d="M12 1v22M1 12h22" stroke="currentColor" stroke-width="0.9" />
+    </svg>
+    <svg class="leaders" data-leaders aria-hidden="true"></svg>
+
+    <p class="stamp" aria-hidden="true">Proof<br /><span>facts only</span></p>
+
+    <div class="row row--name">
+      <div class="row__text">
+        <p class="cv-name">{resume.name}</p>
+        <p class="cv-contact">
+          <span class:list={[emailNote && "circled"]}>{resume.email}</span>{emailNote && <sup class="mark" data-mark={emailNote.n} aria-hidden="true">{emailNote.n}</sup>}
+          <span class="sep" aria-hidden="true">|</span>
+          <a href={resume.github}>{gh}</a>
+        </p>
+      </div>
+      {emailNote && <Note note={emailNote} />}
+    </div>
+
+    <h2 class="cv-h">Summary</h2>
+    <div class="row">
+      <div class="row__text"><p>{resume.summary}<sup class="mark" data-mark={summaryNote.n} aria-hidden="true">{summaryNote.n}</sup></p></div>
+      <Note note={summaryNote} />
+    </div>
+
+    <h2 class="cv-h">Projects</h2>
+    {projects.map((p) => (
+      <section class="cv-project" aria-label={p.name}>
+        <p class="cv-project__title">
+          <a href={p.url}><strong>{p.name}</strong></a>
+          <span class="sep" aria-hidden="true">|</span>
+          <em>{p.tech.join(", ")}</em>
+        </p>
+        <ul class="cv-bullets">
+          {p.bullets.map((b) => (
+            <li class="row">
+              <div class="row__text">
+                {b.markup ? (
+                  <span><span class="dele">**</span>{b.markup.inner}<span class="dele">**</span>.</span>
+                ) : b.truncated ? (
+                  <span>{b.text.slice(0, -1)}<span class="caret" aria-hidden="true"></span>.</span>
+                ) : (
+                  <span>{b.text}</span>
+                )}
+                <sup class="mark" data-mark={b.note.n} aria-hidden="true">{b.note.n}</sup>
+              </div>
+              <Note note={b.note} />
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+
+    {achievement && (
+      <>
+        <h2 class="cv-h">Achievements</h2>
+        <div class="row">
+          <div class="row__text cv-ach">
+            <strong>{achievement.title}</strong>
+            <span>{achievement.description}</span>
+            <span class="cv-ach__year"><span class="circled">{achievement.year}</span><sup class="mark" data-mark={achievementNote.n} aria-hidden="true">{achievementNote.n}</sup></span>
+          </div>
+          <Note note={achievementNote} />
+        </div>
+      </>
+    )}
+
+    <h2 class="cv-h">Technical Skills</h2>
+    <div class="row">
+      <div class="row__text cv-skills">
+        <p><strong>Languages:</strong> {resume.skills.languages.join(", ")}</p>
+        <p><strong>Tools:</strong> {resume.skills.tools.join(", ")}<sup class="mark" data-mark={skillsNote.n} aria-hidden="true">{skillsNote.n}</sup></p>
+      </div>
+      <Note note={skillsNote} />
+    </div>
+  </div>
+
+  <figcaption id="proof-caption" class="proof__caption">
+    GitResume's output for <a href={resume.github}>{username}</a>, generated on {date} with no AI key, so every line comes from the local fallback.
+    This proof sets {shown} of its {totalLines} project lines; the {omitted} left out are loom's commit line (it names collaborators) and two long Cybershield lines.
+    The full response is in <a href={`${cfg.repoUrl}/blob/${cfg.branch}/site/src/data/resume.json`}>site/src/data/resume.json</a>.
+  </figcaption>
+</figure>

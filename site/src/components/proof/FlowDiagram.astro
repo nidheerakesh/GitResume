@@ -1,0 +1,145 @@
+---
+// How a GitResume proof is set, as one ruled diagram. Wide and tall variants
+// of the same drawing; CSS shows the one that fits.
+---
+
+<figure class="flow chapter" id="flow" data-flow>
+  <svg class="flow__wide" viewBox="0 0 1220 400" role="img" aria-labelledby="flow-t flow-d">
+    <title id="flow-t">How GitResume sets a resume</title>
+    <desc id="flow-d">The GitHub API gives public, non-fork repositories, scored and narrowed to 18. For each repo GitResume keeps the description, language bytes, dependency manifests, the start of the README and up to two commit messages. With an AI key, an LLM writes bullets under facts-only rules; with no key, a local fallback writes them by fixed rules. Both lead to the editor with a live preview, then to LaTeX source, a PDF compiled by Tectonic, and four templates.</desc>
+
+    <g class="fd-box">
+      <rect x="10" y="150" width="176" height="110" />
+      <text class="fd-t" x="26" y="182">GitHub API</text>
+      <text class="fd-m" x="26" y="204">github.py</text>
+      <text class="fd-s" x="26" y="228">public, non-fork repos,</text>
+      <text class="fd-s" x="26" y="246">scored; top 18 fetched</text>
+    </g>
+
+    <g>
+      <text class="fd-t" x="252" y="92">description</text>
+      <text class="fd-m" x="252" y="110">repo metadata</text>
+      <text class="fd-t" x="252" y="146">languages</text>
+      <text class="fd-m" x="252" y="164">/languages, bytes</text>
+      <text class="fd-t" x="252" y="200">manifests</text>
+      <text class="fd-m" x="252" y="218">package.json, requirements.txt</text>
+      <text class="fd-t" x="252" y="254">README</text>
+      <text class="fd-m" x="252" y="272">first 1500 characters</text>
+      <text class="fd-t" x="252" y="308">commit messages</text>
+      <text class="fd-m" x="252" y="326">up to 2 per repo</text>
+      <path class="fd-rule" d="M246 120H486M246 174H486M246 228H486M246 282H486M246 336H486" />
+    </g>
+
+    <path class="fd-line" pathLength="1" d="M186 205C214 205 214 90 244 88" />
+    <path class="fd-line" pathLength="1" d="M186 205C214 205 214 142 244 142" />
+    <path class="fd-line" pathLength="1" d="M186 205C214 205 214 196 244 196" />
+    <path class="fd-line" pathLength="1" d="M186 205C214 205 214 250 244 250" />
+    <path class="fd-line" pathLength="1" d="M186 205C214 205 214 304 244 304" />
+
+    <path class="fd-line" pathLength="1" d="M496 76q10 0 10 12v105q0 12 12 12q-12 0 -12 12v105q0 12 -10 12" />
+
+    <g class="fd-box">
+      <rect x="556" y="66" width="250" height="112" />
+      <text class="fd-t" x="572" y="96">LLM, facts-only rules</text>
+      <text class="fd-m" x="572" y="118">ai.py, with a key</text>
+      <text class="fd-s" x="572" y="142">Groq, OpenAI or OpenRouter;</text>
+      <text class="fd-s" x="572" y="160">told not to invent metrics</text>
+    </g>
+    <text class="fd-or" x="672" y="214">or</text>
+    <g class="fd-box fd-red">
+      <rect x="556" y="234" width="250" height="112" />
+      <text class="fd-t" x="572" y="264">Local factual fallback</text>
+      <text class="fd-m" x="572" y="286">ai.py, no key</text>
+      <text class="fd-s" x="572" y="310">fixed rules, one input per line;</text>
+      <text class="fd-s" x="572" y="328">it set the proof above</text>
+    </g>
+    <path class="fd-line" pathLength="1" d="M518 205C536 205 532 122 556 122" />
+    <path class="fd-line fd-line--red" pathLength="1" d="M518 205C536 205 532 290 556 290" />
+
+    <g class="fd-box">
+      <rect x="866" y="150" width="160" height="110" />
+      <text class="fd-t" x="882" y="182">Editor</text>
+      <text class="fd-s" x="882" y="206">live preview, tailor</text>
+      <text class="fd-s" x="882" y="224">to a job, versions</text>
+      <text class="fd-m" x="882" y="246">React + Vite</text>
+    </g>
+    <path class="fd-line" pathLength="1" d="M806 122C838 122 836 205 866 205" />
+    <path class="fd-line fd-line--red" pathLength="1" d="M806 290C838 290 836 205 866 205" />
+
+    <g>
+      <text class="fd-t" x="1078" y="110">.tex</text>
+      <text class="fd-m" x="1078" y="128">Jinja2 to LaTeX</text>
+      <text class="fd-t" x="1078" y="196">PDF</text>
+      <text class="fd-m" x="1078" y="214">Tectonic</text>
+      <text class="fd-t" x="1078" y="282">4 templates</text>
+      <text class="fd-m" x="1078" y="300">iit, jakes,</text>
+      <text class="fd-m" x="1078" y="316">modern, twocol</text>
+      <path class="fd-rule" d="M1072 140H1214M1072 226H1214M1072 328H1214" />
+    </g>
+    <path class="fd-line" pathLength="1" d="M1026 205C1050 205 1046 106 1070 106" />
+    <path class="fd-line" pathLength="1" d="M1026 205H1070" />
+    <path class="fd-line" pathLength="1" d="M1026 205C1050 205 1046 278 1070 278" />
+  </svg>
+
+  <svg class="flow__tall" viewBox="0 0 360 850" role="img" aria-labelledby="flow-t2 flow-d">
+    <title id="flow-t2">How GitResume sets a resume</title>
+    <g class="fd-box">
+      <rect x="14" y="8" width="332" height="84" />
+      <text class="fd-t" x="30" y="38">GitHub API</text>
+      <text class="fd-m" x="30" y="58">github.py</text>
+      <text class="fd-s" x="30" y="80">public, non-fork repos; top 18 fetched</text>
+    </g>
+    <path class="fd-line" pathLength="1" d="M180 92V128" />
+    <g>
+      <text class="fd-t" x="30" y="150">description</text>
+      <text class="fd-m" x="30" y="168">repo metadata</text>
+      <text class="fd-t" x="30" y="200">languages</text>
+      <text class="fd-m" x="30" y="218">/languages, bytes</text>
+      <text class="fd-t" x="30" y="250">manifests</text>
+      <text class="fd-m" x="30" y="268">package.json, requirements.txt</text>
+      <text class="fd-t" x="30" y="300">README</text>
+      <text class="fd-m" x="30" y="318">first 1500 characters</text>
+      <text class="fd-t" x="30" y="350">commit messages</text>
+      <text class="fd-m" x="30" y="368">up to 2 per repo</text>
+      <path class="fd-rule" d="M24 178H346M24 228H346M24 278H346M24 328H346M24 378H346" />
+    </g>
+    <path class="fd-line" pathLength="1" d="M14 130V378" />
+    <path class="fd-line" pathLength="1" d="M180 384V404C180 414 96 410 96 424" />
+    <path class="fd-line fd-line--red" pathLength="1" d="M180 404C180 414 264 410 264 424" />
+    <g class="fd-box">
+      <rect x="14" y="424" width="162" height="128" />
+      <text class="fd-t" x="26" y="452">LLM, facts-only</text>
+      <text class="fd-t" x="26" y="472">rules</text>
+      <text class="fd-m" x="26" y="494">ai.py, with a key</text>
+      <text class="fd-s" x="26" y="518">Groq, OpenAI or</text>
+      <text class="fd-s" x="26" y="536">OpenRouter</text>
+    </g>
+    <g class="fd-box fd-red">
+      <rect x="184" y="424" width="162" height="128" />
+      <text class="fd-t" x="196" y="452">Local factual</text>
+      <text class="fd-t" x="196" y="472">fallback</text>
+      <text class="fd-m" x="196" y="494">ai.py, no key</text>
+      <text class="fd-s" x="196" y="518">it set the proof</text>
+      <text class="fd-s" x="196" y="536">above</text>
+    </g>
+    <path class="fd-line" pathLength="1" d="M96 552C96 572 180 566 180 588" />
+    <path class="fd-line fd-line--red" pathLength="1" d="M264 552C264 572 180 566 180 588" />
+    <g class="fd-box">
+      <rect x="14" y="588" width="332" height="84" />
+      <text class="fd-t" x="30" y="618">Editor</text>
+      <text class="fd-s" x="30" y="640">live preview, tailor to a job, versions</text>
+      <text class="fd-m" x="30" y="660">React + Vite</text>
+    </g>
+    <path class="fd-line" pathLength="1" d="M180 672V700" />
+    <g>
+      <text class="fd-t" x="30" y="726">.tex</text>
+      <text class="fd-m" x="150" y="726">Jinja2 to LaTeX</text>
+      <text class="fd-t" x="30" y="770">PDF</text>
+      <text class="fd-m" x="150" y="770">Tectonic</text>
+      <text class="fd-t" x="30" y="814">4 templates</text>
+      <text class="fd-m" x="150" y="814">iit, jakes,</text>
+      <text class="fd-m" x="150" y="832">modern, twocol</text>
+      <path class="fd-rule" d="M24 742H346M24 786H346" />
+    </g>
+  </svg>
+</figure>

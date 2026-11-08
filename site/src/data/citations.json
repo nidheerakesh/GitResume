@@ -1,0 +1,74 @@
+[
+  {
+    "repo": "APKSentinel",
+    "bullet": "Static analysis and graph attention network that labels Android APKs as benign, suspicious, or malicious, with explanations.",
+    "source": "description",
+    "source_url": "https://github.com/nidheerakesh/APKSentinel"
+  },
+  {
+    "repo": "APKSentinel",
+    "bullet": "Written in Python.",
+    "source": "languages+deps",
+    "source_url": "https://github.com/nidheerakesh/APKSentinel"
+  },
+  {
+    "repo": "APKSentinel",
+    "bullet": "APKSentinel reads an Android APK, extracts evidence with four static analysis agents, turns that evidence into a graph, and labels the app as BENIGN, SUSPICIOUS.",
+    "source": "readme",
+    "source_url": "https://github.com/nidheerakesh/APKSentinel/blob/main/README.md"
+  },
+  {
+    "repo": "GitResume",
+    "bullet": "Written in Python, TypeScript, CSS using FastAPI, Uvicorn, Pydantic, Requests.",
+    "source": "languages+deps",
+    "source_url": "https://github.com/nidheerakesh/GitResume"
+  },
+  {
+    "repo": "GitResume",
+    "bullet": "**Turn your GitHub projects into ATS-friendly LaTeX resumes.**.",
+    "source": "readme",
+    "source_url": "https://github.com/nidheerakesh/GitResume/blob/main/README.md"
+  },
+  {
+    "repo": "loom",
+    "bullet": "Two-sided AI marketplace that routes work to women's self-help group members, with match explanations in spoken Malayalam.",
+    "source": "description",
+    "source_url": "https://github.com/nidheerakesh/loom"
+  },
+  {
+    "repo": "loom",
+    "bullet": "Written in TypeScript, JavaScript, HTML using Radix Ui/react Dialog, Radix Ui/react Dropdown Menu, Radix Ui/react Icons, Radix Ui/react Slot.",
+    "source": "languages+deps",
+    "source_url": "https://github.com/nidheerakesh/loom"
+  },
+  {
+    "repo": "loom",
+    "bullet": "Commit history includes: Remove honest status section from landing page; Add 3-person demo video script (Nidhi, Anjana, Niveditha).",
+    "source": "commit",
+    "source_url": "https://github.com/nidheerakesh/loom/commit/3c4cbcae85298fe9195c4e0b7cf9bd202a786119",
+    "extra_source_urls": [
+      "https://github.com/nidheerakesh/loom/commit/80ecb289c3ebf5f83d34ee3dbc709df5dc9870b4"
+    ]
+  },
+  {
+    "repo": "Cybershield",
+    "bullet": "Written in Python, JavaScript, CSS using Torch, Torch Geometric, Networkx, Scikit Learn.",
+    "source": "languages+deps",
+    "source_url": "https://github.com/nidheerakesh/Cybershield"
+  },
+  {
+    "repo": "Cybershield",
+    "bullet": "**Android Banking Trojan Detector — Reverse Engineering · Graph AI/ML · Swarm Intelligence · GenAI**.",
+    "source": "readme",
+    "source_url": "https://github.com/nidheerakesh/Cybershield/blob/main/README.md"
+  },
+  {
+    "repo": "Cybershield",
+    "bullet": "Commit history includes: ui: monochrome terminal aesthetic — black/white, monospace, no colour; fix: guard .env source in start.sh against missing file.",
+    "source": "commit",
+    "source_url": "https://github.com/nidheerakesh/Cybershield/commit/d16862bd4f9fe6988b48b258157f1a7a374cf3c2",
+    "extra_source_urls": [
+      "https://github.com/nidheerakesh/Cybershield/commit/bacc254e3c54ae5cec591daceff7c2137a4c58d9"
+    ]
+  }
+]

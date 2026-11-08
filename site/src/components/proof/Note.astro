@@ -1,0 +1,22 @@
+---
+// One proofreader's margin note. On wide screens it sits in the sheet's margin
+// with a hairline leader to its mark; on narrow screens it drops under the line.
+import type { Note } from "../../lib/proof";
+interface Props { note: Note }
+const { note } = Astro.props;
+---
+
+<p class:list={["note", `note--${note.kind}`]} id={`note-${note.n}`} data-note={note.n} role="note">
+  <span class="note__head">
+    <span class="note__n" aria-hidden="true">{note.n}</span>
+    {note.kind === "dele" && (
+      <svg class="note__glyph" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path d="M3 15c4-1 7-4 9-9 1 5-1 10-4 12-2 1-3-1-1-3 3-3 8-3 14-1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+      </svg>
+    )}
+    {note.kind === "query" && <span class="note__q" aria-hidden="true">?</span>}
+    <span class="note__label">{note.label}</span>
+  </span>
+  <span class="note__text">{note.text}</span>
+  <a class="note__src" href={note.href} rel="noopener">{note.hrefText}</a>
+</p>

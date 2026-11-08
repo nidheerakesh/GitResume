@@ -1,0 +1,175 @@
+% Based on Jake's Resume by Jake Gutierrez (MIT license)
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[T1]{fontenc}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+\newcommand{\resumeItem}[1]{
+  \item\small{#1 \vspace{-2pt}}
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.15in]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+\begin{document}
+
+%----------HEADING-----------------
+\begin{center}
+    {\Huge \scshape Nidhi Rakesh} \\ \vspace{1pt}
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    \href{mailto:nidheerakesh@github.com}{\underline{nidheerakesh@github.com}} $|$ \href{https://github.com/nidheerakesh}{\underline{github.com/nidheerakesh}}
+\end{center}
+
+
+\section{Summary}
+\small{Software developer with hands-on experience in Python, HTML, JavaScript. Active open-source contributor maintaining 4 repositories on GitHub, including APKSentinel and GitResume.}
+
+
+
+
+
+
+
+%-----------PROJECTS-----------------
+\section{Projects}
+\resumeSubHeadingListStart
+
+\resumeProjectHeading
+{\textbf{APKSentinel} $|$ \emph{Python}}{}
+
+\resumeItemListStart
+
+\resumeItem{Static analysis and graph attention network that labels Android APKs as benign, suspicious, or malicious, with explanations.}
+
+\resumeItem{Written in Python.}
+
+\resumeItem{APKSentinel reads an Android APK, extracts evidence with four static analysis agents, turns that evidence into a graph, and labels the app as BENIGN, SUSPICIOUS.}
+
+\resumeItemListEnd
+
+
+\resumeProjectHeading
+{\textbf{GitResume} $|$ \emph{Jinja2, Beautifulsoup4, Python Multipart, Uvicorn}}{}
+
+\resumeItemListStart
+
+\resumeItem{Written in Python, TypeScript, CSS using FastAPI, Uvicorn, Pydantic, Requests.}
+
+\resumeItem{**Turn your GitHub projects into ATS-friendly LaTeX resumes.**.}
+
+\resumeItemListEnd
+
+
+\resumeProjectHeading
+{\textbf{loom} $|$ \emph{Radix Ui/react Dropdown Menu, Radix Ui/react Toggle Group, Clsx, Radix Ui/react Toggle}}{}
+
+\resumeItemListStart
+
+\resumeItem{Two-sided AI marketplace that routes work to women's self-help group members, with match explanations in spoken Malayalam.}
+
+\resumeItem{Written in TypeScript, JavaScript, HTML using Radix Ui/react Dialog, Radix Ui/react Dropdown Menu, Radix Ui/react Icons, Radix Ui/react Slot.}
+
+\resumeItem{Commit history includes: Remove honest status section from landing page; Add 3-person demo video script (Nidhi, Anjana, Niveditha).}
+
+\resumeItemListEnd
+
+
+\resumeProjectHeading
+{\textbf{Cybershield} $|$ \emph{Xgboost, Numpy, Networkx, Pandas}}{}
+
+\resumeItemListStart
+
+\resumeItem{Written in Python, JavaScript, CSS using Torch, Torch Geometric, Networkx, Scikit Learn.}
+
+\resumeItem{**Android Banking Trojan Detector — Reverse Engineering · Graph AI/ML · Swarm Intelligence · GenAI**.}
+
+\resumeItem{Commit history includes: ui: monochrome terminal aesthetic — black/white, monospace, no colour; fix: guard .env source in start.sh against missing file.}
+
+\resumeItemListEnd
+
+
+\resumeSubHeadingListEnd
+
+
+
+%-----------ACHIEVEMENTS-----------------
+\section{Achievements}
+\resumeSubHeadingListStart
+
+\resumeItem{\textbf{Open Source Contributor} -- Maintained 4 public repositories on GitHub with 1 star (2025)}
+
+\resumeSubHeadingListEnd
+
+
+
+%-----------TECHNICAL SKILLS-----------------
+\section{Technical Skills}
+\resumeSubHeadingListStart
+
+\resumeItem{\textbf{Languages:} Python, HTML, JavaScript, TypeScript, Dart, CSS}
+
+
+
+\resumeItem{\textbf{Developer Tools:} Git, GitHub Actions}
+
+\resumeSubHeadingListEnd
+
+
+
+
+
+
+\end{document}

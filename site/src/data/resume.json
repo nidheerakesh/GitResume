@@ -1,0 +1,106 @@
+{
+  "name": "Nidhi Rakesh",
+  "email": "nidheerakesh@github.com",
+  "phone": "",
+  "linkedin": "",
+  "github": "https://github.com/nidheerakesh",
+  "course": "",
+  "roll": "",
+  "website": "",
+  "summary": "Software developer with hands-on experience in Python, HTML, JavaScript. Active open-source contributor maintaining 4 repositories on GitHub, including APKSentinel and GitResume.",
+  "skills": {
+    "languages": [
+      "Python",
+      "HTML",
+      "JavaScript",
+      "TypeScript",
+      "Dart",
+      "CSS"
+    ],
+    "frameworks": [],
+    "tools": [
+      "Git",
+      "GitHub Actions"
+    ]
+  },
+  "experience": [],
+  "projects": [
+    {
+      "name": "APKSentinel",
+      "tech": [
+        "Python"
+      ],
+      "start_date": "",
+      "end_date": "",
+      "url": "https://github.com/nidheerakesh/APKSentinel",
+      "bullets": [
+        "Static analysis and graph attention network that labels Android APKs as benign, suspicious, or malicious, with explanations.",
+        "Written in Python.",
+        "APKSentinel reads an Android APK, extracts evidence with four static analysis agents, turns that evidence into a graph, and labels the app as BENIGN, SUSPICIOUS."
+      ]
+    },
+    {
+      "name": "GitResume",
+      "tech": [
+        "Jinja2",
+        "Beautifulsoup4",
+        "Python Multipart",
+        "Uvicorn"
+      ],
+      "start_date": "",
+      "end_date": "",
+      "url": "https://github.com/nidheerakesh/GitResume",
+      "bullets": [
+        "Written in Python, TypeScript, CSS using FastAPI, Uvicorn, Pydantic, Requests.",
+        "**Turn your GitHub projects into ATS-friendly LaTeX resumes.**."
+      ]
+    },
+    {
+      "name": "loom",
+      "tech": [
+        "Radix Ui/react Dropdown Menu",
+        "Radix Ui/react Toggle Group",
+        "Clsx",
+        "Radix Ui/react Toggle"
+      ],
+      "start_date": "",
+      "end_date": "",
+      "url": "https://github.com/nidheerakesh/loom",
+      "bullets": [
+        "Two-sided AI marketplace that routes work to women's self-help group members, with match explanations in spoken Malayalam.",
+        "Written in TypeScript, JavaScript, HTML using Radix Ui/react Dialog, Radix Ui/react Dropdown Menu, Radix Ui/react Icons, Radix Ui/react Slot.",
+        "Commit history includes: Remove honest status section from landing page; Add 3-person demo video script (Nidhi, Anjana, Niveditha)."
+      ]
+    },
+    {
+      "name": "Cybershield",
+      "tech": [
+        "Xgboost",
+        "Numpy",
+        "Networkx",
+        "Pandas"
+      ],
+      "start_date": "",
+      "end_date": "",
+      "url": "https://github.com/nidheerakesh/Cybershield",
+      "bullets": [
+        "Written in Python, JavaScript, CSS using Torch, Torch Geometric, Networkx, Scikit Learn.",
+        "**Android Banking Trojan Detector — Reverse Engineering · Graph AI/ML · Swarm Intelligence · GenAI**.",
+        "Commit history includes: ui: monochrome terminal aesthetic — black/white, monospace, no colour; fix: guard .env source in start.sh against missing file."
+      ]
+    }
+  ],
+  "education": [],
+  "achievements": [
+    {
+      "title": "Open Source Contributor",
+      "description": "Maintained 4 public repositories on GitHub with 1 star",
+      "year": "2025"
+    }
+  ],
+  "coursework": {
+    "cs": "",
+    "math": ""
+  },
+  "positions": []
+}

@@ -1,0 +1,16 @@
+---
+// A screenshot set like a plate in a printed book: numbered, framed, captioned.
+import { withBase } from "../../lib/source";
+interface Props { name: string; alt: string; num: string; w: number; h: number; wide?: boolean }
+const { name, alt, num, w, h, wide = false } = Astro.props;
+---
+
+<figure class:list={["plate", wide && "plate--wide"]}>
+  <div class="plate__mat">
+    <picture>
+      <source srcset={withBase(`media/${name}.webp`)} type="image/webp" />
+      <img src={withBase(`media/${name}.png`)} alt={alt} width={w} height={h} loading="lazy" decoding="async" />
+    </picture>
+  </div>
+  <figcaption><span class="plate__num">Plate {num}.</span> <slot /></figcaption>
+</figure>

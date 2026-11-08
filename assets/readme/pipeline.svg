@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 220" width="100%" role="img" aria-labelledby="t d">
+  <title id="t">GitResume pipeline</title>
+  <desc id="d">GitHub API, per-repo facts, an LLM with facts-only rules or a local factual fallback, then live preview, LaTeX, and PDF.</desc>
+  <rect width="1200" height="220" rx="14" fill="#F4F1EA"/>
+  <rect x="0.5" y="0.5" width="1199" height="219" rx="14" fill="none" stroke="#1B1B1B" stroke-opacity="0.18"/>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#B3261E"/></marker></defs>
+  <g font-family="'Latin Modern Roman','Computer Modern',Georgia,'Times New Roman',serif" fill="#1B1B1B" font-size="24" text-anchor="middle">
+    <g fill="none" stroke="#1B1B1B" stroke-width="1.5">
+      <rect x="30" y="50" width="240" height="120"/><rect x="320" y="50" width="290" height="120"/>
+      <rect x="660" y="50" width="240" height="120"/><rect x="960" y="50" width="210" height="120"/>
+    </g>
+    <text x="150" y="104" font-weight="700">GitHub API</text><text x="150" y="136" font-size="20" font-style="italic">public repos only</text>
+    <text x="465" y="104" font-weight="700">Facts per repo</text><text x="465" y="136" font-size="20" font-style="italic">description, languages</text><text x="465" y="158" font-size="19" font-style="italic">manifests, README, commits</text>
+    <text x="780" y="104" font-weight="700">LLM or fallback</text><text x="780" y="136" font-size="20" font-style="italic">facts-only rules, or</text><text x="780" y="158" font-size="20" font-style="italic">plain local facts</text>
+    <text x="1065" y="104" font-weight="700">Output</text><text x="1065" y="136" font-size="20" font-style="italic">preview, .tex, PDF</text>
+  </g>
+  <g stroke="#B3261E" stroke-width="2.5" marker-end="url(#a)"><line x1="272" y1="110" x2="326" y2="110"/><line x1="602" y1="110" x2="656" y2="110"/><line x1="902" y1="110" x2="956" y2="110"/></g>
+</svg>

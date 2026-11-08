@@ -1,0 +1,95 @@
+---
+import Landing from "../layouts/Landing.astro";
+import RunningHead from "../components/proof/RunningHead.astro";
+import ProofSheet from "../components/proof/ProofSheet.astro";
+import FlowDiagram from "../components/proof/FlowDiagram.astro";
+import Plate from "../components/proof/Plate.astro";
+import Colophon from "../components/proof/Colophon.astro";
+import "@fontsource/jetbrains-mono/latin-400.css";
+import "../styles/proof.css";
+import { cfg, withBase } from "../lib/source";
+---
+
+<Landing title="GitResume, your resume cited from your repos" description={cfg.description}>
+  <RunningHead slot="header" />
+  <div class="page">
+    <section class="mast">
+      <div class="mast__copy">
+        <h1 data-ital>Your resume, <span class="ital">cited</span> from your repos.</h1>
+        <p class="deck">
+          GitResume reads your public GitHub repositories (descriptions, languages, dependency manifests, READMEs and commit messages)
+          and drafts a resume you edit in the browser, tailor to a job, and export as LaTeX or a PDF.
+          The sheet below is its real output for one profile, made with no AI key. Each red mark points to the repo line it came from.
+        </p>
+        <p class="actions">
+          <a class="btn-ink" href={cfg.appUrl} rel="noopener">Open GitResume <span aria-hidden="true">&rarr;</span></a>
+          <a href={withBase("guide/")}>Read the guide</a>
+          <a href={cfg.repoUrl} rel="noopener">Source on GitHub</a>
+        </p>
+      </div>
+      <aside class="key" aria-label="Key to proof marks">
+        <p class="key__title">Key to marks</p>
+        <dl>
+          <dt><span class="key__u">ital.</span></dt><dd><b>Italic.</b> One underline: set the word in italic.</dd>
+          <dt><span class="note__n">3</span></dt><dd><b>Source.</b> Where the line came from, linked.</dd>
+          <dt><span class="note__q">?</span></dt><dd><b>Query.</b> Check this before you send it.</dd>
+          <dt><span class="dele">**</span></dt><dd><b>Delete.</b> Strike it out.</dd>
+        </dl>
+      </aside>
+    </section>
+
+    <section id="proof" class="chapter" aria-labelledby="proof-h">
+      <h2 id="proof-h" class="sr-only">The proof</h2>
+      <ProofSheet />
+    </section>
+
+    <section id="set" class="chapter set" aria-labelledby="set-h">
+      <h2 id="set-h" class="sec-h">How it was set</h2>
+      <p class="lede">
+        One request to GitHub, a handful of facts per repository, and one of two writers. With an AI key, a model drafts the bullets under facts-only instructions.
+        Without one, a local fallback writes each line from exactly one input, which is why every line above can be cited.
+      </p>
+      <FlowDiagram />
+      <div class="notes-after">
+        <p><b>Instructions, not checks.</b> The model is told to use only what is in the inputs and to invent no metrics. That is a prompt, not a guarantee, so read the draft before you use it.</p>
+        <p><b>Your copy, your call.</b> Everything lands in an editor with a live preview. Tailoring to a job proposes rewrites you stage or discard one by one, then saves a new version.</p>
+      </div>
+    </section>
+
+    <section id="plates" class="chapter plates" aria-labelledby="plates-h">
+      <h2 id="plates-h" class="sec-h">Plates from the working app</h2>
+      <p class="lede">Captured from a local run against the same public profile, with no AI key.</p>
+      <div class="plates__grid">
+        <figure class="plate plate--wide">
+          <div class="plate__mat">
+            <video controls muted playsinline preload="none" width="1280" height="800" poster={withBase("media/generate-poster.webp")} aria-label="Screen recording: picking four repositories and generating a resume with no AI key.">
+              <source src={withBase("media/generate.webm")} type="video/webm" />
+              <source src={withBase("media/generate.mp4")} type="video/mp4" />
+            </video>
+          </div>
+          <figcaption><span class="plate__num">The run.</span> Four repositories picked, Generate pressed, and the no-key fallback fills the editor. Eleven seconds, no sound.</figcaption>
+        </figure>
+        <Plate name="landing-form" num="I" w={1440} h={900} alt="GitResume first screen with a GitHub username field, an optional token field and an optional Groq or OpenRouter key field.">
+          The first screen: a GitHub username, an optional token, an optional AI key. Leave the key empty and a local draft is used.
+        </Plate>
+        <Plate name="tailor" num="II" w={1440} h={1080} alt="Create tailored resume dialog with job keywords, projects to include, skill order and a staged summary rewrite.">
+          Tailoring to a job. Missing keywords are shown in red and never added for you; each rewrite is staged or discarded.
+        </Plate>
+        <Plate name="template-picker" num="III" w={1440} h={1080} alt="Editor beside a PDF preview of the resume in the Jake's Resume template.">
+          Jake's Resume, one of four LaTeX templates, compiled to PDF.
+        </Plate>
+        <Plate name="pdf-preview" num="IV" w={1440} h={1080} alt="Editor beside a PDF preview of the resume in the IIT style template.">
+          The IIT style template, compiled by Tectonic and shown in the PDF tab.
+        </Plate>
+        <Plate name="resume-preview" num="V" w={1440} h={1250} alt="Editor with header fields beside the live sheet preview of the resume.">
+          The live sheet, which updates as you type. Download the PDF or the .tex source from the top of the editor.
+        </Plate>
+      </div>
+    </section>
+  </div>
+  <Colophon slot="footer" />
+</Landing>
+
+<script>
+  import "../scripts/proof.ts";
+</script>

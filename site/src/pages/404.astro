@@ -1,0 +1,37 @@
+---
+import Landing from "../layouts/Landing.astro";
+import RunningHead from "../components/proof/RunningHead.astro";
+import Colophon from "../components/proof/Colophon.astro";
+import "@fontsource/jetbrains-mono/latin-400.css";
+import "../styles/proof.css";
+import { cfg, withBase } from "../lib/source";
+---
+
+<Landing title="Page not set, GitResume" description="This address has no page. Go back to the GitResume proof or the guide.">
+  <RunningHead slot="header" folio="proof 1, page missing" />
+  <div class="page">
+    <section class="mast">
+      <div class="mast__copy">
+        <h1>This page was never set.</h1>
+        <p class="deck">There is no page at this address. The proof and the guide are where they should be.</p>
+        <p class="actions">
+          <a class="btn-ink" href={withBase("")}>Back to the proof</a>
+          <a href={withBase("guide/")}>Read the guide</a>
+          <a href={cfg.appUrl} rel="noopener">Open GitResume</a>
+        </p>
+      </div>
+      <aside class="key" aria-label="Proof query">
+        <p class="key__title">Query</p>
+        <p class="note note--query" role="note">
+          <span class="note__head"><span class="note__q" aria-hidden="true">?</span><span class="note__label">page missing</span></span>
+          <span class="note__text">No route at this address. Check the link, or start from the front page.</span>
+        </p>
+      </aside>
+    </section>
+  </div>
+  <Colophon slot="footer" />
+</Landing>
+
+<script>
+  import "../scripts/proof.ts";
+</script>
