@@ -11,13 +11,17 @@ import type {
   SavedVersion,
   Skills,
   Tab,
+  TailorChoices,
   TailorDiffItem,
+  TailorInsights,
   TemplateInfo,
 } from './types';
 import {
   applyAcceptedDiffs,
+  applyTailorInsights,
   generateTailorDiffs,
   normalizeResumeData,
+  readTailorInsights,
 } from './resumeUtils';
 import { LoginCard } from './components/LoginCard';
 import { Portal } from './components/Portal';
@@ -95,6 +99,7 @@ function App() {
   const [isTailoring, setIsTailoring] = useState(false);
   const [tailorSuccess, setTailorSuccess] = useState(false);
   const [tailorDiffs, setTailorDiffs] = useState<TailorDiffItem[]>([]);
+  const [tailorInsights, setTailorInsights] = useState<TailorInsights | null>(null);
   const [showTailorReviewModal, setShowTailorReviewModal] = useState(false);
 
   // Version Control States
@@ -512,12 +517,9 @@ function App() {
 
       const tailoredData = await res.json();
       const generated = generateTailorDiffs(resumeData, tailoredData);
+      const insights = readTailorInsights(resumeData, tailoredData);
 
-      if (generated.length === 0) {
-        notify('No changes suggested. This resume already matches the job.');
-        return;
-      }
-
+      setTailorInsights(insights);
       setTailorDiffs(generated);
       setShowTailorReviewModal(true);
       setTailorSuccess(true);
@@ -537,15 +539,38 @@ function App() {
   const closeTailorReview = () => {
     setShowTailorReviewModal(false);
     setTailorDiffs([]);
+    setTailorInsights(null);
   };
 
-  const applyTailoredSuggestions = () => {
+  const addVersions = (entries: { name: string; data: ResumeData }[]) => {
+    const now = Date.now();
+    const created: SavedVersion[] = entries.map((e, i) => ({
+      id: String(now + i),
+      name: e.name,
+      timestamp: new Date().toLocaleString(),
+      data: e.data,
+    }));
+    const updated = [...created.reverse(), ...savedVersions];
+    setSavedVersions(updated);
+    localStorage.setItem(VERSIONS_KEY, JSON.stringify(updated));
+  };
+
+  const applyTailoredSuggestions = (choices: TailorChoices, versionName: string) => {
     if (!resumeData) return;
     const { updatedResume, appliedCount } = applyAcceptedDiffs(resumeData, tailorDiffs);
-    setResumeData(updatedResume);
+    const tailored = tailorInsights ? applyTailorInsights(updatedResume, tailorInsights, choices) : updatedResume;
+    const current = JSON.stringify(resumeData);
+    const alreadySaved = savedVersions.some((v) => JSON.stringify(v.data) === current);
+    const name = versionName.trim() || `Tailored: ${tailorInsights?.targetRole ?? 'job'}`;
+    addVersions([
+      ...(alreadySaved ? [] : [{ name: `Before tailoring (${new Date().toLocaleDateString()})`, data: resumeData }]),
+      { name, data: tailored },
+    ]);
+    setResumeData(tailored);
     setShowTailorReviewModal(false);
     setTailorDiffs([]);
-    notify(`Applied ${appliedCount} staged change${appliedCount === 1 ? '' : 's'}.`);
+    setTailorInsights(null);
+    notify(`Saved "${name}" with ${appliedCount} reworded line${appliedCount === 1 ? '' : 's'}. Your original is in Versions.`);
   };
 
   // AI Chatbot Assistant handler
@@ -838,6 +863,8 @@ function App() {
       {showTailorReviewModal && (
         <TailorReviewModal
           diffs={tailorDiffs}
+          insights={tailorInsights}
+          projects={resumeData?.projects ?? []}
           onToggle={handleToggleDiffStatus}
           onClose={closeTailorReview}
           onApply={applyTailoredSuggestions}

@@ -15,7 +15,7 @@ export function TailorFields({ jobDescription, setJobDescription, isTailoring, t
       <div className="note note-accent">
         <span className="note-title"><Sparkles size={16} /> Tailor to a job</span>
         <p>
-          Paste a job description. The model proposes changes to the summary and bullets. You stage or discard each one before it applies.
+          Paste a job description to get a tailored copy: reworded bullets you approve one by one, the projects that fit the job, skills ordered for it, and a keyword check. Your current resume is kept as a saved version.
         </p>
       </div>
 
@@ -34,13 +34,13 @@ export function TailorFields({ jobDescription, setJobDescription, isTailoring, t
           </>
         ) : (
           <>
-            <Sparkles size={16} /> Get suggestions
+            <Sparkles size={16} /> Create tailored resume
           </>
         )}
       </button>
       {tailorSuccess && (
         <div className="status-line status-line-success status-line-center">
-          <CheckCircle size={16} /> Suggestions ready for review.
+          <CheckCircle size={16} /> Tailored copy ready for review.
         </div>
       )}
     </div>
